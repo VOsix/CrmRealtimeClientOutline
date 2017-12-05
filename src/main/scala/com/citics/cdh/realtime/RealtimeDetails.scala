@@ -81,7 +81,8 @@ object RealtimeDetails {
                          "COALESCE(rt.DICT_PROMPT,'') as real_name, " +
                          "r.branch_no as branch_no, " +
                          "COALESCE(br.branch_name,'') as branch_name, " +
-                         "r.real_status as real_status " +
+                         "r.real_status as real_status, " +
+                         "r.real_type as real_type " +
                          "from realtime_details r " +
                          "left outer join tmp_stkcode c " +
                          "on r.exchange_type = c.exchange_type and r.stock_code = c.stock_code " +
@@ -94,7 +95,19 @@ object RealtimeDetails {
                          "left outer join tmp_moneytype as mt " +
                          "on c.money_type = mt.subentry " +
                          "left outer join tmp_allbranch as br " +
-                         "on r.branch_no = br.branch_no").persist()
+                         "on r.branch_no = br.branch_no " +
+                         "where r.position_str is not null and " +
+                         "r.fund_account is not null and " +
+                         "r.client_id is not null and " +
+                         "r.curr_date is not null and " +
+                         "r.curr_time is not null and " +
+                         "r.stock_code is not null and " +
+                         "r.business_price is not null and " +
+                         "r.business_amount is not null and " +
+                         "r.business_balance is not null and " +
+                         "r.branch_no is not null and " +
+                         "r.real_status is not null and " +
+                         "r.real_type is not null").persist()
 //        df.show(10)
 
         df.foreachPartition(iter => {
@@ -121,7 +134,7 @@ object RealtimeDetails {
                 mapper.registerModule(DefaultScalaModule)
                 val staff_list = mapper.readValue(client.get("staff_list"), classOf[util.ArrayList[immutable.Map[String, String]]])
 
-                val postion_str = r(0).toString
+                val position_str = r(0).toString
                 val fund_account = r(1).toString
                 val client_id = r(2).toString
                 val curr_time = r(3).toString
@@ -129,21 +142,22 @@ object RealtimeDetails {
                 val stkname = r(5).toString
                 val moneytype_name = r(6).toString
                 val remark = r(7).toString
-                val price = r(8).toString.toDouble
-                val amount = r(9).toString.toLong
-                val balance = r(10).toString.toDouble
+                val price = r(8).toString
+                val amount = r(9).toString
+                val balance = r(10).toString
                 val market_name = r(11).toString
                 val real_name = r(12).toString
                 val branch_no = r(13).toString
                 val branch_name = r(14).toString
                 val real_status = r(15).toString
+                val real_type = r(16).toString
 
                 for (i <- staff_list) {
 
                   val staff_id = i.getOrElse("id", "")
                   val staff_name = i.getOrElse("name", "")
 
-                  val rowkey = staff_id + "|" + curr_time.split(" ")(0) + "|" + "0|" + postion_str
+                  val rowkey = staff_id + "|" + curr_time.split(" ")(0) + "|" + "0|" + position_str
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
 
@@ -151,7 +165,7 @@ object RealtimeDetails {
                     //检验hbase无此明细 确保重提唯一性
                     //hbase 记录明细
                     val put = new Put(Bytes.toBytes(rowkey))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("postion_str"), Bytes.toBytes(postion_str))
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("position_str"), Bytes.toBytes(position_str))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("fund_account"), Bytes.toBytes(fund_account))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_id"), Bytes.toBytes(client_id))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("curr_time"), Bytes.toBytes(curr_time))
@@ -167,6 +181,7 @@ object RealtimeDetails {
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("branch_no"), Bytes.toBytes(branch_no))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("branch_name"), Bytes.toBytes(branch_name))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("real_status"), Bytes.toBytes(real_status))
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("real_type"), Bytes.toBytes(real_type))
 
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))
@@ -183,18 +198,21 @@ object RealtimeDetails {
                       jedisCluster.expireAt(realtimeKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
                     }
                     jedisCluster.hincrBy(realtimeKey, "deal_count", 1)
-                    jedisCluster.hincrByFloat(realtimeKey, "deal_balance", balance)
+                    jedisCluster.hincrByFloat(realtimeKey, "deal_balance", balance.toDouble)
 
                     //员工下挂客户最大成交量
-                    val topdealKey = String.format(Utils.redisAggregateTopdealKey, staff_id)
-                    val member = String.format("bno:%s:bname:%s:fund:%s:cn:%s:mt:%s",
-                                               branch_no, branch_name, fund_account, client_name, moneytype_name)
+                    if (real_type == "0" && real_status  == "0") {
+                      //买卖 已成交
+                      val topdealKey = String.format(Utils.redisAggregateTopdealKey, staff_id)
+                      val member = String.format("bno:%s:bname:%s:fund:%s:cn:%s:mt:%s",
+                        branch_no, branch_name, fund_account, client_name, moneytype_name)
 
-                    if (jedisCluster.zcard(topdealKey) == 0) {
-                      jedisCluster.zincrby(topdealKey, 0.00, member)
-                      jedisCluster.expireAt(topdealKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
+                      if (jedisCluster.zcard(topdealKey) == 0) {
+                        jedisCluster.zincrby(topdealKey, 0.00, member)
+                        jedisCluster.expireAt(topdealKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
+                      }
+                      jedisCluster.zincrby(topdealKey, balance.toDouble, member)
                     }
-                    jedisCluster.zincrby(topdealKey, balance, member)
                   }
                 }
               }

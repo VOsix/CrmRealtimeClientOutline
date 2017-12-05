@@ -5,6 +5,8 @@ import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable
+
 /**
   * Created by 029188 on 2017-12-2.
   */
@@ -109,14 +111,17 @@ object HiveUtils {
   def schemaFieldsCheck(scehma: StructType, fnames: String*): Boolean = {
     var hasAllField = true
     val scehmaFields = scehma.fields.map(fd => (fd.name, 1)).toMap
+    val fields = mutable.HashSet[String]()
 
     for(fn <- fnames) {
       val result = scehmaFields.getOrElse(fn, 0)
       if(result == 0) {
         hasAllField = false
-        logger.warn("{} not find in schema", fn)
+        fields.add(fn)
       }
     }
+    if (!hasAllField)
+      logger.warn("{} not find in schema", fields)
     hasAllField
   }
 }

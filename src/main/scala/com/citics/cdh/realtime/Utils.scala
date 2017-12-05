@@ -121,8 +121,8 @@ object Utils {
   def concatDateTime = (date: Any, time: Any) => {
 
     var rst: String = ""
-    val datetime = String.format("%8s %9s", date.toString, time.toString)
     try {
+      val datetime = String.format("%8s %9s", date.toString, time.toString)
       val dt = new SimpleDateFormat("yyyyMMdd HHmmssSSS").parse(datetime)
       val df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
       rst = df.format(dt)
@@ -130,7 +130,7 @@ object Utils {
       case ex: Exception => {
         //解析异常 使用当前时间戳
         rst = getSpecDay(0, "yyyy-MM-dd HH:mm:ss")
-        logger.warn("{} parse to 'yyyyMMdd HHmmssSSS' error", datetime)
+        logger.warn("parse to 'yyyyMMdd HHmmssSSS' error")
         ex.printStackTrace()
       }
     }
