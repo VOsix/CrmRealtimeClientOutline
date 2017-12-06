@@ -79,15 +79,15 @@ object EntrustDetails {
                          "COALESCE(ew.DICT_PROMPT,'') as op_entrust_way_name, " +
                          "COALESCE(et.DICT_PROMPT,'') as market_name " +
                          "from entrust_details e " +
-                         "left outer join on tmp_stkcode c " +
+                         "left outer join tmp_stkcode c " +
                          "on e.exchange_type = c.exchange_type and e.stock_code = c.stock_code " +
-                         "left outer join on tmp_entrustway ew " +
+                         "left outer join tmp_entrustway ew " +
                          "on e.op_entrust_way = ew.subentry " +
-                         "left outer join on tmp_entrustbs eb " +
+                         "left outer join tmp_entrustbs eb " +
                          "on e.entrust_bs = eb.subentry " +
-                         "left outer join on tmp_exchangetype et " +
+                         "left outer join tmp_exchangetype et " +
                          "on e.exchange_type = et.subentry " +
-                         "left outer join on tmp_moneytype mt " +
+                         "left outer join tmp_moneytype mt " +
                          "on e.money_type = mt.subentry " +
                          "where e.entrust_type = '0' and " +
                          "e.position_str is not null and " +
