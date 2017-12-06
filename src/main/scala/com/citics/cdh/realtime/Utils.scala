@@ -34,6 +34,7 @@ object Utils {
   val hbaseTKafkaOffset     = "realtime:kafka_offset"
   val hbaseTStkCode         = "EDM_REALTIME:STKCODE"
   val hbaseTRealtimeDetails = "realtime:client_outline_realtime_details"
+  val hbaseTEntrustDetails  = "realtime:client_outline_entrust_details"
 
   //hive
   val hiveStockCode = "bf_hs_user.stkcode"
@@ -62,6 +63,7 @@ object Utils {
   val redisClientRelKey = "realtime:crm:client_rel:client_id:%s"
   val redisAggregateRealtimeKey = "realtime:crm:aggregate:realtime:staff_id:%s"
   val redisAggregateTopdealKey =  "realtime:crm:aggregate:realtime:top10:staff_id:%s"
+  val redisAggregateEntrustKey = "realtime:crm:aggregate:entrust:staff_id:%s"
 
   val insertOpt = "\"op_type\":\"I\""
   val updateOpt = "\"op_type\":\"U\""

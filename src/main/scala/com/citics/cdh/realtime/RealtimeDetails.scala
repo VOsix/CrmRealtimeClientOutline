@@ -157,7 +157,8 @@ object RealtimeDetails {
                   val staff_id = i.getOrElse("id", "")
                   val staff_name = i.getOrElse("name", "")
 
-                  val rowkey = staff_id + "|" + curr_time.split(" ")(0) + "|" + "0|" + position_str
+                  //staff_id 逆序 realtime 0
+                  val rowkey = staff_id.reverse + "|" + curr_time.split(" ")(0) + "|" + "0|" + position_str
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
 
@@ -189,29 +190,31 @@ object RealtimeDetails {
 
                     table.put(put)
 
-                    //聚合统计
-                    //实时汇总部分
-                    val realtimeKey = String.format(Utils.redisAggregateRealtimeKey, staff_id)
+                    //当日聚合统计
+                    if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                      //实时汇总部分
+                      val realtimeKey = String.format(Utils.redisAggregateRealtimeKey, staff_id)
 
-                    if (!jedisCluster.hexists(realtimeKey, "staff_name")) {
-                      jedisCluster.hmset(realtimeKey, Map("staff_name"->staff_name))
-                      jedisCluster.expireAt(realtimeKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
-                    }
-                    jedisCluster.hincrBy(realtimeKey, "deal_count", 1)
-                    jedisCluster.hincrByFloat(realtimeKey, "deal_balance", balance.toDouble)
-
-                    //员工下挂客户最大成交量
-                    if (real_type == "0" && real_status  == "0") {
-                      //买卖 已成交
-                      val topdealKey = String.format(Utils.redisAggregateTopdealKey, staff_id)
-                      val member = String.format("bno:%s:bname:%s:fund:%s:cn:%s:mt:%s",
-                        branch_no, branch_name, fund_account, client_name, moneytype_name)
-
-                      if (jedisCluster.zcard(topdealKey) == 0) {
-                        jedisCluster.zincrby(topdealKey, 0.00, member)
-                        jedisCluster.expireAt(topdealKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
+                      if (!jedisCluster.hexists(realtimeKey, "staff_name")) {
+                        jedisCluster.hmset(realtimeKey, Map("staff_name"->staff_name))
+                        jedisCluster.expireAt(realtimeKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
                       }
-                      jedisCluster.zincrby(topdealKey, balance.toDouble, member)
+                      jedisCluster.hincrBy(realtimeKey, "deal_count", 1)
+                      jedisCluster.hincrByFloat(realtimeKey, "deal_balance", balance.toDouble)
+
+                      //员工下挂客户最大成交量
+                      if (real_type == "0" && real_status  == "0") {
+                        //买卖 已成交
+                        val topdealKey = String.format(Utils.redisAggregateTopdealKey, staff_id)
+                        val member = String.format("bno:%s:bname:%s:fund:%s:cn:%s:mt:%s",
+                          branch_no, branch_name, fund_account, client_name, moneytype_name)
+
+                        if (jedisCluster.zcard(topdealKey) == 0) {
+                          jedisCluster.zincrby(topdealKey, 0.00, member)
+                          jedisCluster.expireAt(topdealKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
+                        }
+                        jedisCluster.zincrby(topdealKey, balance.toDouble, member)
+                      }
                     }
                   }
                 }
