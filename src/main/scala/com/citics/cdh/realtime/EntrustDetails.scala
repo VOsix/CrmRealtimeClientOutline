@@ -144,8 +144,8 @@ object EntrustDetails {
                   val staff_id = i.getOrElse("id", "")
                   val staff_name = i.getOrElse("name", "")
 
-                  //staff_id 逆序 entrust 1
-                  val rowkey = staff_id.reverse + "|" + curr_time.split(" ")(0) + "|" + "1|" + position_str
+                  //staff_id 逆序
+                  val rowkey = staff_id.reverse + "|" + curr_time.split(" ")(0) + "|" + position_str
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
 

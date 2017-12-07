@@ -96,7 +96,8 @@ object RealtimeDetails {
                          "on c.money_type = mt.subentry " +
                          "left outer join tmp_allbranch as br " +
                          "on r.branch_no = br.branch_no " +
-                         "where r.position_str is not null and " +
+                         "where r.real_status != '2' and " +
+                         "r.position_str is not null and " +
                          "r.fund_account is not null and " +
                          "r.client_id is not null and " +
                          "r.curr_date is not null and " +
@@ -157,8 +158,8 @@ object RealtimeDetails {
                   val staff_id = i.getOrElse("id", "")
                   val staff_name = i.getOrElse("name", "")
 
-                  //staff_id 逆序 realtime 0
-                  val rowkey = staff_id.reverse + "|" + curr_time.split(" ")(0) + "|" + "0|" + position_str
+                  //staff_id 逆序
+                  val rowkey = staff_id.reverse + "|" + curr_time.split(" ")(0) + "|" + position_str
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
 

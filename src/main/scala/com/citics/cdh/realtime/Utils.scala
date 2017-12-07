@@ -24,6 +24,7 @@ object Utils {
   val brokerList = "kk01.cshadoop.com:9092,kk02.cshadoop.com:9092,nn03.cshadoop.com:9092"
   val topicOggRealtime     = "ogg-realtime"
   val topicOggEntrust      = "ogg-entrust"
+  val topicOggFoudjour     = "ogg-fundjour"
   val topicOggOfentrust    = "ogg-ofentrust"
   val topicOggOtcbookorder = "ogg-otcbookorder"
   val topicOggOtcorder     = "ogg-otcorder"
@@ -35,6 +36,7 @@ object Utils {
   val hbaseTStkCode         = "EDM_REALTIME:STKCODE"
   val hbaseTRealtimeDetails = "realtime:client_outline_realtime_details"
   val hbaseTEntrustDetails  = "realtime:client_outline_entrust_details"
+  val hbaseTFoudjourDetails  = "realtime:client_outline_fundjour_details"
 
   //hive
   val hiveStockCode = "bf_hs_user.stkcode"
@@ -62,8 +64,10 @@ object Utils {
   jedisClusterNodes.add(new HostAndPort("10.23.152.240", 7001))
   val redisClientRelKey = "realtime:crm:client_rel:client_id:%s"
   val redisAggregateRealtimeKey = "realtime:crm:aggregate:realtime:staff_id:%s"
-  val redisAggregateTopdealKey =  "realtime:crm:aggregate:realtime:top10:staff_id:%s"
-  val redisAggregateEntrustKey = "realtime:crm:aggregate:entrust:staff_id:%s"
+  val redisAggregateTopdealKey  = "realtime:crm:aggregate:realtime:top10:staff_id:%s"
+  val redisAggregateEntrustKey  = "realtime:crm:aggregate:entrust:staff_id:%s"
+  val redisAggregateFundjourKey = "realtime:crm:aggregate:foudjour:staff_id:%s"
+  val redisAggregateFundOutKey  = "realtime:crm:aggregate:foudjour:out:staff_id:%s"
 
   val insertOpt = "\"op_type\":\"I\""
   val updateOpt = "\"op_type\":\"U\""
@@ -142,8 +146,8 @@ object Utils {
   def concatDateTime2 = (date: Any, time: Any) => {
 
     var rst: String = ""
-    val datetime = String.format("%8s %6s", date.toString, time.toString)
     try {
+      val datetime = String.format("%8s %6s", date.toString, time.toString)
       val dt = new SimpleDateFormat("yyyyMMdd HHmmss").parse(datetime)
       val df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
       rst = df.format(dt)
@@ -151,7 +155,7 @@ object Utils {
       case ex: Exception => {
         //解析异常 使用当前时间戳
         rst = getSpecDay(0, "yyyy-MM-dd HH:mm:ss")
-        logger.warn("{} parse to 'yyyyMMdd HHmmss' error", datetime)
+        logger.warn("{} parse to 'yyyyMMdd HHmmss' error")
         ex.printStackTrace()
       }
     }
