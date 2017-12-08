@@ -177,11 +177,16 @@ object FundjourDetails {
 
                     //当日聚合统计
                     if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                      //记录条数汇总
+                      val index = jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "fundjour_count", 1)
+                      //明细建立索引
+                      jedisCluster.zincrby(String.format(Utils.redisFoudjourIndex, staff_id), index.toDouble, position_str)
+
                       //实时汇总部分
                       val fundjourKey = String.format(Utils.redisAggregateFundjourKey, staff_id)
 
-                      if (!jedisCluster.hexists(fundjourKey, "staff_name")) {
-                        jedisCluster.hmset(fundjourKey, Map("staff_name"->staff_name))
+                      if (!jedisCluster.hexists(fundjourKey, "in_balance")) {
+//                        jedisCluster.hmset(fundjourKey, Map("staff_name"->staff_name))
                         jedisCluster.hincrBy(fundjourKey, "in_count", 0)
                         jedisCluster.hincrByFloat(fundjourKey, "in_balance", 0.00)
                         jedisCluster.hincrBy(fundjourKey, "out_count", 0)

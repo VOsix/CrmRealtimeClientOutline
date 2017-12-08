@@ -193,11 +193,20 @@ object RealtimeDetails {
 
                     //当日聚合统计
                     if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                      //记录条数汇总
+                      val tmp = jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "realtime_count", 1)
+                      //明细建立索引
+                      val index = curr_time.split(" ")(1).split(":").mkString + tmp.toString
+                      val indexKey = String.format(Utils.redisRealtimeIndex, staff_id)
+                      jedisCluster.zincrby(indexKey, index.toDouble, position_str)
+                      jedisCluster.expireAt(indexKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
+
                       //实时汇总部分
                       val realtimeKey = String.format(Utils.redisAggregateRealtimeKey, staff_id)
 
-                      if (!jedisCluster.hexists(realtimeKey, "staff_name")) {
-                        jedisCluster.hmset(realtimeKey, Map("staff_name"->staff_name))
+                      if (!jedisCluster.hexists(realtimeKey, "deal_count")) {
+//                        jedisCluster.hmset(realtimeKey, Map("staff_name"->staff_name))
+                        jedisCluster.hincrBy(realtimeKey, "deal_count", 0)
                         jedisCluster.expireAt(realtimeKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
                       }
                       jedisCluster.hincrBy(realtimeKey, "deal_count", 1)
