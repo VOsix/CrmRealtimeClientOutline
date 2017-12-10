@@ -157,9 +157,11 @@ object RealtimeDetails {
 
                   val staff_id = i.getOrElse("id", "")
                   val staff_name = i.getOrElse("name", "")
+                  //记录条数汇总 offline有效期修改!!!
+                  val item_index = Utils.getStaffItemIndex(jedisCluster, staff_id, curr_time, "realtime_count")
 
                   //staff_id 逆序
-                  val rowkey = staff_id.reverse + "|" + curr_time.split(" ")(0) + "|" + position_str
+                  val rowkey = staff_id.reverse + "|" + curr_time.split(" ")(0) + "|" + item_index
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
 
@@ -193,12 +195,9 @@ object RealtimeDetails {
 
                     //当日聚合统计
                     if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
-                      //记录条数汇总
-                      val tmp = jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "realtime_count", 1)
-                      //明细建立索引
-                      val index = curr_time.split(" ")(1).split(":").mkString + tmp.toString
+                      //明细rowkey建立索引 仅当天
                       val indexKey = String.format(Utils.redisRealtimeIndex, staff_id)
-                      jedisCluster.zincrby(indexKey, index.toDouble, position_str)
+                      jedisCluster.zincrby(indexKey, item_index.toDouble, rowkey)
                       jedisCluster.expireAt(indexKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
 
                       //实时汇总部分
