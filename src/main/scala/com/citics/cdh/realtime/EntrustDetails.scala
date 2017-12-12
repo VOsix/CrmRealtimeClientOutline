@@ -144,8 +144,9 @@ object EntrustDetails {
                   val staff_id = i.getOrElse("id", "")
                   val staff_name = i.getOrElse("name", "")
 
-                  //staff_id 逆序
-                  val rowkey = staff_id.reverse + "|" + curr_time.split(" ")(0) + "|" + position_str
+                  //staff_id 逆序 同一员工下按position_str排序
+                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, client_name, fund_account, stkcode)
+                  val rowkey = arr.mkString("|")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
 
@@ -177,15 +178,12 @@ object EntrustDetails {
                     //当日聚合统计
                     if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
-                      val index = jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "entrust_count", 1)
-                      //明细建立索引
-                      jedisCluster.zincrby(String.format(Utils.redisEntrustIndex, staff_id), index.toDouble, position_str)
+                      jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "entrust_count", 1)
 
                       //实时汇总部分
                       val entrustKey = String.format(Utils.redisAggregateEntrustKey, staff_id)
 
                       if (!jedisCluster.hexists(entrustKey, "entrust_count")) {
-//                        jedisCluster.hmset(entrustKey, Map("staff_name"->staff_name))
                         jedisCluster.hincrBy(entrustKey, "entrust_count", 0)
                         jedisCluster.expireAt(entrustKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
                       }

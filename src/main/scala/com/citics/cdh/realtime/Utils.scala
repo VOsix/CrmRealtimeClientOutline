@@ -70,11 +70,6 @@ object Utils {
   val redisAggregateFundjourKey = "realtime:crm:aggregate:fundjour:staff_id:%s"
   val redisAggregateFundOutKey  = "realtime:crm:aggregate:fundjour:out:staff_id:%s"
 
-  val redisRealtimeIndex = "realtime:crm:index:realtime:staff_id:%s"
-  val redisEntrustIndex = "realtime:crm:index:entrust:staff_id:%s"
-  val redisFoudjourIndex = "realtime:crm:index:fundjour:staff_id:%s"
-
-
 
   val insertOpt = "\"op_type\":\"I\""
   val updateOpt = "\"op_type\":\"U\""

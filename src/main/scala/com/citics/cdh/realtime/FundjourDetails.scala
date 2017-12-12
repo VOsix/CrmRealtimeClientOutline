@@ -145,8 +145,9 @@ object FundjourDetails {
                   val staff_id = i.getOrElse("id", "")
                   val staff_name = i.getOrElse("name", "")
 
-                  //staff_id 逆序
-                  val rowkey = staff_id.reverse + "|" + curr_time.split(" ")(0) + "|" + position_str
+                  //staff_id 逆序 同一员工下按position_str排序
+                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, fund_account)
+                  val rowkey = arr.mkString("|")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
 
@@ -178,15 +179,12 @@ object FundjourDetails {
                     //当日聚合统计
                     if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
-                      val index = jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "fundjour_count", 1)
-                      //明细建立索引
-                      jedisCluster.zincrby(String.format(Utils.redisFoudjourIndex, staff_id), index.toDouble, position_str)
+                      jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "fundjour_count", 1)
 
                       //实时汇总部分
                       val fundjourKey = String.format(Utils.redisAggregateFundjourKey, staff_id)
 
                       if (!jedisCluster.hexists(fundjourKey, "in_balance")) {
-//                        jedisCluster.hmset(fundjourKey, Map("staff_name"->staff_name))
                         jedisCluster.hincrBy(fundjourKey, "in_count", 0)
                         jedisCluster.hincrByFloat(fundjourKey, "in_balance", 0.00)
                         jedisCluster.hincrBy(fundjourKey, "out_count", 0)
