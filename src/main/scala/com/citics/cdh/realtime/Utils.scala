@@ -8,7 +8,7 @@ import org.json4s.{DefaultFormats, NoTypeHints}
 import org.json4s.native.{Json, Serialization}
 import org.json4s.native.Serialization.write
 import org.slf4j.LoggerFactory
-import redis.clients.jedis.{HostAndPort, JedisPoolConfig}
+import redis.clients.jedis.{HostAndPort, JedisCluster, JedisPoolConfig}
 
 import scala.collection.mutable
 import scala.util.parsing.json.JSON
@@ -81,7 +81,7 @@ object Utils {
   jedisClusterNodes.add(new HostAndPort("10.23.152.240", 7000))
   jedisClusterNodes.add(new HostAndPort("10.23.152.240", 7001))
   val redisClientRelKey = "realtime:crm:client_rel:client_id:%s"
-  val redisStaffInfoKey = "realtime:crm:staff_info:staff_id:%s"
+  val redisStaffInfoKey = "realtime:crm:staff_info:staff_id:%s:date:%s"
   val redisAggregateRealtimeKey = "realtime:crm:aggregate:realtime:staff_id:%s"
   val redisAggregateTopdealKey  = "realtime:crm:aggregate:realtime:top:staff_id:%s"
   val redisAggregateEntrustKey  = "realtime:crm:aggregate:entrust:staff_id:%s"
@@ -182,6 +182,16 @@ object Utils {
     rst
   }
 
+  def getStaffItemIndex(jedisCluster: JedisCluster, staff_id: String, time: String, key: String): String = {
 
+    //按当日
+    val index = jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id, time.split(" ")(0)), key, 1)
+
+    val arr = time.split(" ")(1).split(":").map(_.toInt)
+    val seconds = arr(0) * 60 * 60 + arr(1) * 60 + arr(2)
+
+    //1开头 当日秒数5位 顺序号8位
+    f"1$seconds%05d$index%08d"
+  }
 
 }
