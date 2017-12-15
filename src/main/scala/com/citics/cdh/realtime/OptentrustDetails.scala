@@ -21,9 +21,9 @@ import scala.collection.immutable
 /**
   * Created by 029188 on 2017-12-5.
   */
-object CrdtentrustDetails {
+object OptentrustDetails {
 
-  val conf = new SparkConf().setAppName("crmClientOutline_crdtentrustDetails")
+  val conf = new SparkConf().setAppName("crmClientOutline_optentrustDetails")
   val logger = LoggerFactory.getLogger(getClass)
 
   def main(args: Array[String]): Unit = {
@@ -33,7 +33,7 @@ object CrdtentrustDetails {
     val hvc = new HiveContext(sc)
 
     sc.setLogLevel("WARN")
-    val kafkaReader = new KafkaReader[String, String, StringDecoder, StringDecoder](ssc, Utils.brokerList, Utils.topicOggCrdtentrust,
+    val kafkaReader = new KafkaReader[String, String, StringDecoder, StringDecoder](ssc, Utils.brokerList, Utils.topicOggOptentrust,
       Utils.hbaseTKafkaOffset, Utils.hbaseHosts, Utils.hbasePort)
 
     val kafkaStream = kafkaReader.getKafkaStream()
@@ -50,13 +50,13 @@ object CrdtentrustDetails {
 
     insertRecords.foreachRDD(rdd => {
 
-      HiveUtils.readStkcodeFromHive(sc, hvc)
+      HiveUtils.readOptcodeFromHive(sc, hvc)
       HiveUtils.readSystemdictFromHive(sc, hvc)
 
       val entrust_details = hvc.read.json(rdd)
 
       if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "POSITION_STR", "BRANCH_NO", "FUND_ACCOUNT", "CLIENT_ID",
-                                      "CURR_DATE", "CURR_TIME", "STOCK_CODE", "ENTRUST_PRICE", "ENTRUST_AMOUNT", "EXCHANGE_TYPE",
+                                      "CURR_DATE", "CURR_TIME", "OPTION_CODE", "STOCK_CODE", "OPT_ENTRUST_PRICE", "ENTRUST_AMOUNT", "EXCHANGE_TYPE",
                                       "OP_ENTRUST_WAY", "ENTRUST_BS", "MONEY_TYPE")) {
 
         entrust_details.registerTempTable("entrust_details")
@@ -72,15 +72,16 @@ object CrdtentrustDetails {
                          "e.stock_code as stkcode, COALESCE(c.stock_name,'') as stkname, " +
                          "COALESCE(mt.DICT_PROMPT,'') as money_type_name, " +
                          "COALESCE(eb.DICT_PROMPT,'') as remark, " +
-                         "e.entrust_price as entrust_price, " +
+                         "e.opt_entrust_price as entrust_price, " +
                          "e.entrust_amount as entrust_amount, " +
-                         "round(e.entrust_price*e.entrust_amount,2) as entrust_balance, " +
+                         "round(e.opt_entrust_price*e.entrust_amount,2) as entrust_balance, " +
                          "COALESCE(ew.DICT_PROMPT,'') as op_entrust_way_name, " +
                          "COALESCE(et.DICT_PROMPT,'') as market_name, " +
-                         "e.exchange_type as exchange_type " +
+                         "e.exchange_type as exchange_type, " +
+                         "e.option_code as option_code " +
                          "from entrust_details e " +
-                         "left outer join tmp_stkcode c " +
-                         "on e.exchange_type = c.exchange_type and e.stock_code = c.stock_code " +
+                         "left outer join tmp_optcode c " +
+                         "on e.exchange_type = c.exchange_type and e.option_code = c.option_code " +
                          "left outer join tmp_entrustway ew " +
                          "on e.op_entrust_way = ew.subentry " +
                          "left outer join tmp_entrustbs eb " +
@@ -89,7 +90,7 @@ object CrdtentrustDetails {
                          "on e.exchange_type = et.subentry " +
                          "left outer join tmp_moneytype mt " +
                          "on e.money_type = mt.subentry " +
-                         "where e.entrust_type in ('6','7','8','9') and " +
+                         "where e.entrust_type = '0' and " +
                          "e.position_str is not null and " +
                          "e.branch_no is not null and " +
                          "e.fund_account is not null and " +
@@ -97,7 +98,8 @@ object CrdtentrustDetails {
                          "e.curr_date is not null and " +
                          "e.curr_time is not null and " +
                          "e.stock_code is not null and " +
-                         "e.entrust_price is not null and " +
+                         "e.option_code is not null and " +
+                         "e.opt_entrust_price is not null and " +
                          "e.entrust_amount is not null").repartition(10).persist()
 
         df.foreachPartition(iter => {
@@ -109,7 +111,7 @@ object CrdtentrustDetails {
           try {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
             hbaseConnect = HbaseUtils.getConnect()
-            val tableName = TableName.valueOf(Utils.hbaseTCrdtentrustDetails)
+            val tableName = TableName.valueOf(Utils.hbaseTOptentrustDetails)
             table = hbaseConnect.getTable(tableName)
 
             for (r <- iter) {
@@ -139,10 +141,11 @@ object CrdtentrustDetails {
                 val op_entrust_way_name = r(12).toString
                 val market_name = r(13).toString
                 val exchange_type = r(14).toString
+                val option_code = r(15).toString
 
                 if (stkname.length == 0 || moneytype_name.length == 0) {
                   //通过hbase查询
-                  val stockInfo = HbaseUtils.getStkcodeFromHbase(hbaseConnect, exchange_type, stkcode)
+                  val stockInfo = HbaseUtils.getOptcodeFromHbase(hbaseConnect, exchange_type, option_code)
 
                   if (stkname.length == 0)
                     stkname = stockInfo._1
@@ -189,17 +192,7 @@ object CrdtentrustDetails {
                     //当日聚合统计
                     if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
-                      jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "crdtentrust_count", 1)
-
-                      //实时汇总部分
-                      val entrustKey = String.format(Utils.redisAggregateEntrustKey, staff_id)
-
-                      if (!jedisCluster.hexists(entrustKey, "entrust_count")) {
-                        jedisCluster.hincrBy(entrustKey, "entrust_count", 0)
-                        jedisCluster.expireAt(entrustKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
-                      }
-                      jedisCluster.hincrBy(entrustKey, "entrust_count", 1)
-                      jedisCluster.hincrByFloat(entrustKey, "entrust_balance", entrust_balance.toDouble)
+                      jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "optentrust_count", 1)
                     }
                   }
                 }
