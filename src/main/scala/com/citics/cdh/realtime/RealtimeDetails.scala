@@ -82,10 +82,11 @@ object RealtimeDetails {
                          "r.branch_no as branch_no, " +
                          "COALESCE(br.branch_name,'') as branch_name, " +
                          "r.real_status as real_status, " +
-                         "r.real_type as real_type " +
+                         "r.real_type as real_type, " +
+                         "r.exchange_type as exchange_type " +
                          "from realtime_details r " +
-                         "left outer join tmp_stkcode c " +
-                         "on r.exchange_type = c.exchange_type and r.stock_code = c.stock_code " +
+                         "join tmp_stkcode c " +
+                         "on r.exchange_type = c.exchange_type and r.stock_code = c.stock_code and c.stock_type != '4' " +
                          "left outer join tmp_entrustbs as eb " +
                          "on r.entrust_bs = eb.subentry " +
                          "left outer join tmp_realtype as rt " +
@@ -97,6 +98,7 @@ object RealtimeDetails {
                          "left outer join tmp_allbranch as br " +
                          "on r.branch_no = br.branch_no " +
                          "where r.real_status != '2' and " +
+                         "r.real_type != '2' and " +
                          "r.position_str is not null and " +
                          "r.fund_account is not null and " +
                          "r.client_id is not null and " +
@@ -108,7 +110,7 @@ object RealtimeDetails {
                          "r.business_balance is not null and " +
                          "r.branch_no is not null and " +
                          "r.real_status is not null and " +
-                         "r.real_type is not null").persist()
+                         "r.real_type is not null").repartition(20).persist()
 //        df.show(10)
 
         df.foreachPartition(iter => {
@@ -121,7 +123,7 @@ object RealtimeDetails {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
             hbaseConnect = HbaseUtils.getConnect()
             val tableName = TableName.valueOf(Utils.hbaseTRealtimeDetails)
-            val table = hbaseConnect.getTable(tableName)
+            table = hbaseConnect.getTable(tableName)
 
             for (r <- iter) {
               val key = String.format(Utils.redisClientRelKey, r(2).toString)
@@ -140,8 +142,8 @@ object RealtimeDetails {
                 val client_id = r(2).toString
                 val curr_time = r(3).toString
                 val stkcode = r(4).toString
-                val stkname = r(5).toString
-                val moneytype_name = r(6).toString
+                var stkname = r(5).toString
+                var moneytype_name = r(6).toString
                 val remark = r(7).toString
                 val price = r(8).toString
                 val amount = r(9).toString
@@ -152,6 +154,17 @@ object RealtimeDetails {
                 val branch_name = r(14).toString
                 val real_status = r(15).toString
                 val real_type = r(16).toString
+                val exchange_type = r(17).toString
+
+                if (stkname.length == 0 || moneytype_name.length == 0) {
+                  //通过hbase查询
+                  val stockInfo = HbaseUtils.getStkcodeFromHbase(hbaseConnect, exchange_type, stkcode)
+
+                  if (stkname.length == 0)
+                    stkname = stockInfo._1
+                  if (moneytype_name.length == 0)
+                    moneytype_name = stockInfo._2
+                }
 
                 for (i <- staff_list) {
 
@@ -211,8 +224,8 @@ object RealtimeDetails {
                       if (real_type == "0" && real_status  == "0") {
                         //买卖 已成交
                         val topdealKey = String.format(Utils.redisAggregateTopdealKey, staff_id)
-                        val member = String.format("bno:%s:bname:%s:fund:%s:cn:%s:mt:%s",
-                          branch_no, branch_name, fund_account, client_name, moneytype_name)
+                        val member = String.format("bno:%s:bname:%s:fund:%s:cn:%s:mt:%s:cid:%s",
+                          branch_no, branch_name, fund_account, client_name, moneytype_name, client_id)
 
                         if (jedisCluster.zcard(topdealKey) == 0) {
                           jedisCluster.zincrby(topdealKey, 0.00, member)

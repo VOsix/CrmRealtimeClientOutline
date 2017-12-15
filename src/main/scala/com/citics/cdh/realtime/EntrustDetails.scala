@@ -77,7 +77,8 @@ object EntrustDetails {
                          "e.entrust_amount as entrust_amount, " +
                          "round(e.entrust_price*e.entrust_amount,2) as entrust_balance, " +
                          "COALESCE(ew.DICT_PROMPT,'') as op_entrust_way_name, " +
-                         "COALESCE(et.DICT_PROMPT,'') as market_name " +
+                         "COALESCE(et.DICT_PROMPT,'') as market_name, " +
+                         "e.exchange_type as exchange_type " +
                          "from entrust_details e " +
                          "left outer join tmp_stkcode c " +
                          "on e.exchange_type = c.exchange_type and e.stock_code = c.stock_code " +
@@ -110,7 +111,7 @@ object EntrustDetails {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
             hbaseConnect = HbaseUtils.getConnect()
             val tableName = TableName.valueOf(Utils.hbaseTEntrustDetails)
-            val table = hbaseConnect.getTable(tableName)
+            table = hbaseConnect.getTable(tableName)
 
             for (r <- iter) {
               val key = String.format(Utils.redisClientRelKey, r(3).toString)
@@ -130,14 +131,25 @@ object EntrustDetails {
                 val client_id = r(3).toString
                 val curr_time = r(4).toString
                 val stkcode = r(5).toString
-                val stkname = r(6).toString
-                val moneytype_name = r(7).toString
+                var stkname = r(6).toString
+                var moneytype_name = r(7).toString
                 val remark = r(8).toString
                 val entrust_price = r(9).toString
                 val entrust_amount = r(10).toString
                 val entrust_balance = r(11).toString
                 val op_entrust_way_name = r(12).toString
                 val market_name = r(13).toString
+                val exchange_type = r(14).toString
+
+                if (stkname.length == 0 || moneytype_name.length == 0) {
+                  //通过hbase查询
+                  val stockInfo = HbaseUtils.getStkcodeFromHbase(hbaseConnect, exchange_type, stkcode)
+
+                  if (stkname.length == 0)
+                    stkname = stockInfo._1
+                  if (moneytype_name.length == 0)
+                    moneytype_name = stockInfo._2
+                }
 
                 for (i <- staff_list) {
 

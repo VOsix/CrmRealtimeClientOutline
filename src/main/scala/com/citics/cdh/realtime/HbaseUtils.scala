@@ -1,15 +1,13 @@
 package com.citics.cdh.realtime
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.hbase.client.{Connection, ConnectionFactory, Result, ResultScanner}
+import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
+import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.hive.HiveContext
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
@@ -72,5 +70,67 @@ object HbaseUtils {
       }
     }
     rst
+  }
+
+  def getStkcodeFromHbase(conn: Connection, exchange_type: String, stock_code: String): (String, String) = {
+
+    val tableName = TableName.valueOf(Utils.hbaseTStkcode)
+    val table = conn.getTable(tableName)
+
+    val rowkey = s"${exchange_type}|${stock_code}"
+    val get = new Get(Bytes.toBytes(rowkey))
+    get.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("STOCK_NAME"))
+    get.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("MONEY_TYPE"))
+
+    try {
+      val rs = table.get(get).rawCells().map(c => (Bytes.toString(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength),
+        Bytes.toString(c.getValueArray, c.getValueOffset, c.getValueLength))).toMap
+      val result = (rs.getOrElse("STOCK_NAME", ""), rs.getOrElse("MONEY_TYPE", "") match {
+        case "0" => "人民币"
+        case "1" => "美元"
+        case "2" => "港币"
+        case _ => ""
+      })
+      logger.warn(s"stkcode read from hbase $exchange_type|$stock_code|${result._1}|${result._2}")
+      result
+    } catch {
+      case ex: Exception => {
+        ex.printStackTrace()
+        throw ex
+      }
+    } finally {
+      table.close()
+    }
+  }
+
+  def getOptcodeFromHbase(conn: Connection, exchange_type: String, option_code: String): (String, String) = {
+
+    val tableName = TableName.valueOf(Utils.hbaseTOptcode)
+    val table = conn.getTable(tableName)
+
+    val rowkey = s"${exchange_type}|${option_code}"
+    val get = new Get(Bytes.toBytes(rowkey))
+    get.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("STOCK_NAME"))
+    get.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("MONEY_TYPE"))
+
+    try {
+      val rs = table.get(get).rawCells().map(c => (Bytes.toString(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength),
+        Bytes.toString(c.getValueArray, c.getValueOffset, c.getValueLength))).toMap
+      val result = (rs.getOrElse("STOCK_NAME", ""), rs.getOrElse("MONEY_TYPE", "") match {
+        case "0" => "人民币"
+        case "1" => "美元"
+        case "2" => "港币"
+        case _ => ""
+      })
+      logger.warn(s"optcode read from hbase $exchange_type|$option_code|${result._1}|${result._2}")
+      result
+    } catch {
+      case ex: Exception => {
+        ex.printStackTrace()
+        throw ex
+      }
+    } finally {
+      table.close()
+    }
   }
 }

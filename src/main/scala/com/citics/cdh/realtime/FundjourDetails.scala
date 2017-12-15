@@ -111,7 +111,7 @@ object FundjourDetails {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
             hbaseConnect = HbaseUtils.getConnect()
             val tableName = TableName.valueOf(Utils.hbaseTFoudjourDetails)
-            val table = hbaseConnect.getTable(tableName)
+            table = hbaseConnect.getTable(tableName)
 
             for (r <- iter) {
               val key = String.format(Utils.redisClientRelKey, r(3).toString)
@@ -211,8 +211,8 @@ object FundjourDetails {
                       //大于5w资金转出
                       if (business_flag == "2042") {
                         val fundoutKey = String.format(Utils.redisAggregateFundOutKey, staff_id)
-                        val member = String.format("bno:%s:bname:%s:fund:%s:cn:%s:mt:%s:bus:%s",
-                          branch_no, branch_name, fund_account, client_name, moneytype_name, remark)
+                        val member = String.format("bno:%s:bname:%s:fund:%s:cn:%s:mt:%s:bus:%s:cid:%s",
+                          branch_no, branch_name, fund_account, client_name, moneytype_name, remark, client_id)
 
                         if (jedisCluster.zcard(fundoutKey) == 0) {
                           jedisCluster.zincrby(fundoutKey, 0.00, member)

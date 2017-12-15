@@ -76,7 +76,9 @@ object OptrealtimeDetails {
                          "r.business_amount as amount, " +
                          "r.business_balance as balance, " +
                          "COALESCE(et.DICT_PROMPT,'') as market_name, " +
-                         "COALESCE(rt.DICT_PROMPT,'') as real_name " +
+                         "COALESCE(rt.DICT_PROMPT,'') as real_name, " +
+                         "r.exchange_type as exchange_type, " +
+                         "r.option_code as option_code " +
                          "from realtime_details r " +
                          "left outer join tmp_optcode c " +
                          "on r.exchange_type = c.exchange_type and r.option_code = c.option_code " +
@@ -100,7 +102,7 @@ object OptrealtimeDetails {
                          "r.business_amount is not null and " +
                          "r.business_balance is not null and " +
                          "r.real_status is not null and " +
-                         "r.real_type is not null").persist()
+                         "r.real_type is not null").repartition(10).persist()
 //        df.show(10)
 
         df.foreachPartition(iter => {
@@ -113,7 +115,7 @@ object OptrealtimeDetails {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
             hbaseConnect = HbaseUtils.getConnect()
             val tableName = TableName.valueOf(Utils.hbaseTOptrealtimeDetails)
-            val table = hbaseConnect.getTable(tableName)
+            table = hbaseConnect.getTable(tableName)
 
             for (r <- iter) {
               val key = String.format(Utils.redisClientRelKey, r(2).toString)
@@ -132,14 +134,26 @@ object OptrealtimeDetails {
                 val client_id = r(2).toString
                 val curr_time = r(3).toString
                 val stkcode = r(4).toString
-                val stkname = r(5).toString
-                val moneytype_name = r(6).toString
+                var stkname = r(5).toString
+                var moneytype_name = r(6).toString
                 val remark = r(7).toString
                 val price = r(8).toString
                 val amount = r(9).toString
                 val balance = r(10).toString
                 val market_name = r(11).toString
                 val real_name = r(12).toString
+                val exchange_type = r(13).toString
+                val option_code = r(14).toString
+
+                if (stkname.length == 0 || moneytype_name.length == 0) {
+                  //通过hbase查询
+                  val stockInfo = HbaseUtils.getOptcodeFromHbase(hbaseConnect, exchange_type, option_code)
+
+                  if (stkname.length == 0)
+                    stkname = stockInfo._1
+                  if (moneytype_name.length == 0)
+                    moneytype_name = stockInfo._2
+                }
 
                 for (i <- staff_list) {
 

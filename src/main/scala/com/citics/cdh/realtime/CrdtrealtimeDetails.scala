@@ -76,10 +76,11 @@ object CrdtrealtimeDetails {
                          "r.business_amount as amount, " +
                          "r.business_balance as balance, " +
                          "COALESCE(et.DICT_PROMPT,'') as market_name, " +
-                         "COALESCE(rt.DICT_PROMPT,'') as real_name " +
+                         "COALESCE(rt.DICT_PROMPT,'') as real_name, " +
+                         "r.exchange_type as exchange_type " +
                          "from realtime_details r " +
-                         "left outer join tmp_stkcode c " +
-                         "on r.exchange_type = c.exchange_type and r.stock_code = c.stock_code " +
+                         "join tmp_stkcode c " +
+                         "on r.exchange_type = c.exchange_type and r.stock_code = c.stock_code and c.stock_type != '4' " +
                          "left outer join tmp_entrustbs as eb " +
                          "on r.entrust_bs = eb.subentry " +
                          "left outer join tmp_realtype as rt " +
@@ -89,6 +90,7 @@ object CrdtrealtimeDetails {
                          "left outer join tmp_moneytype as mt " +
                          "on c.money_type = mt.subentry " +
                          "where r.real_status != '2' and " +
+                         "r.real_type != '2' and " +
                          "r.position_str is not null and " +
                          "r.fund_account is not null and " +
                          "r.client_id is not null and " +
@@ -99,7 +101,7 @@ object CrdtrealtimeDetails {
                          "r.business_amount is not null and " +
                          "r.business_balance is not null and " +
                          "r.real_status is not null and " +
-                         "r.real_type is not null").persist()
+                         "r.real_type is not null").repartition(10).persist()
 //        df.show(10)
 
         df.foreachPartition(iter => {
@@ -112,7 +114,7 @@ object CrdtrealtimeDetails {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
             hbaseConnect = HbaseUtils.getConnect()
             val tableName = TableName.valueOf(Utils.hbaseTCrdtrealtiemDetails)
-            val table = hbaseConnect.getTable(tableName)
+            table = hbaseConnect.getTable(tableName)
 
             for (r <- iter) {
               val key = String.format(Utils.redisClientRelKey, r(2).toString)
@@ -131,14 +133,25 @@ object CrdtrealtimeDetails {
                 val client_id = r(2).toString
                 val curr_time = r(3).toString
                 val stkcode = r(4).toString
-                val stkname = r(5).toString
-                val moneytype_name = r(6).toString
+                var stkname = r(5).toString
+                var moneytype_name = r(6).toString
                 val remark = r(7).toString
                 val price = r(8).toString
                 val amount = r(9).toString
                 val balance = r(10).toString
                 val market_name = r(11).toString
                 val real_name = r(12).toString
+                val exchange_type = r(13).toString
+
+                if (stkname.length == 0 || moneytype_name.length == 0) {
+                  //通过hbase查询
+                  val stockInfo = HbaseUtils.getStkcodeFromHbase(hbaseConnect, exchange_type, stkcode)
+
+                  if (stkname.length == 0)
+                    stkname = stockInfo._1
+                  if (moneytype_name.length == 0)
+                    moneytype_name = stockInfo._2
+                }
 
                 for (i <- staff_list) {
 

@@ -31,7 +31,7 @@ object HiveUtils {
 
     if (hasReadStkcode != true) {
       query_init(sc)
-      val df = hvc.sql(s"select exchange_type, stock_code, " +
+      val df = hvc.sql(s"select exchange_type, stock_code, stock_type, " +
                        s"COALESCE(stock_name,'') as stock_name, COALESCE(money_type,'') as money_type " +
                        s"from ${Utils.hiveStockCode}")
       df.registerTempTable("tmp_stkcode")
