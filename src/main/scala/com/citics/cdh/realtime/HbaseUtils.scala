@@ -73,15 +73,4 @@ object HbaseUtils {
     }
     rst
   }
-
-  //读取hbase中全量stockcode表
-  def readStockCodeFromHbase(sc: SparkContext, hvc: HiveContext): DataFrame = {
-
-    val hbaseConf = HBaseConfiguration.create()
-    hbaseConf.set("hbase.zookeeper.property.clientPort", Utils.hbasePort)
-    hbaseConf.set("hbase.zookeeper.quorum", Utils.hbaseHosts)
-    hbaseConf.set(TableInputFormat.SCAN_CACHEDROWS, "100")
-    hbaseConf.set(TableInputFormat.INPUT_TABLE, Utils.hbaseTStkCode)
-    hvc.read.json(getDateFromHbase(sc, hbaseConf))
-  }
 }

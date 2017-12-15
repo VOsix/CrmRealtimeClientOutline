@@ -25,18 +25,34 @@ object Utils {
   val topicOggRealtime     = "ogg-realtime"
   val topicOggEntrust      = "ogg-entrust"
   val topicOggFoudjour     = "ogg-fundjour"
+  val topicOggCrdtrealtime = "ogg-crdtrealtime"
+  val topicOggCrdtentrust  = "ogg-crdtentrust"
+  val topicOggOptrealtime  = "ogg-optrealtime"
+  val topicOggOptentrust   = "ogg-optentrust"
   val topicOggOfentrust    = "ogg-ofentrust"
   val topicOggOtcbookorder = "ogg-otcbookorder"
   val topicOggOtcorder     = "ogg-otcorder"
+  val topicOggCtstentrust  = "ogg-ctstentrust"
+  val topicOggStockjour    = "ogg-stockjour"
 
   //hbase
   val hbaseHosts = "10.23.147.32,10.23.147.33,10.23.147.39"
   val hbasePort = "2181"
   val hbaseTKafkaOffset     = "realtime:kafka_offset"
-  val hbaseTStkCode         = "EDM_REALTIME:STKCODE"
   val hbaseTRealtimeDetails = "realtime:client_outline_realtime_details"
   val hbaseTEntrustDetails  = "realtime:client_outline_entrust_details"
   val hbaseTFoudjourDetails  = "realtime:client_outline_fundjour_details"
+  val hbaseTCrdtrealtiemDetails = "realtime:client_outline_crdtrealtime_details"
+  val hbaseTCrdtentrustDetails = "realtime:client_outline_crdtentrust_details"
+  val hbaseTOptrealtimeDetails = "realtime:client_outline_optrealtime_details"
+  val hbaseTOptentrustDetails = "realtime:client_outline_optentrust_details"
+
+  val hbaseTOfentrustDetails = "realtime:client_outline_ofentrust_details"
+  val hbaseTOtcbookorderDetails = "realtime:client_outline_otcborder_details"
+  val hbaseTOtcorderDetails = "realtime:client_outline_otcorder_details"
+  val hbaseTCtstentrustDetails = "realtime:client_outline_ctstentrust_details"
+  val hbaseTStockjourDetails = "realtime:client_outline_stockjour_details"
+
 
   //hive
   val hiveStockCode = "bf_hs_user.stkcode"
