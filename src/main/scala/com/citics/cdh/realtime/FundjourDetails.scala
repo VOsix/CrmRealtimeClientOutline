@@ -89,7 +89,7 @@ object FundjourDetails {
                          "on f.op_entrust_way = ew.subentry " +
                          "left outer join tmp_moneytype mt " +
                          "on f.money_type = mt.subentry " +
-                         "where f.business_flag not in (2317, 2318) and " +
+                         "where f.business_flag not in (2317, 2318, 4170) and " +
                          "f.position_str is not null and " +
                          "f.branch_no is not null and " +
                          "f.fund_account is not null and " +

@@ -192,6 +192,16 @@ object CrdtrealtimeDetails {
                     if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
                       jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "crdtrealtime_count", 1)
+
+                      //实时汇总部分
+                      val realtimeKey = String.format(Utils.redisAggregateRealtimeKey, staff_id)
+
+                      if (!jedisCluster.hexists(realtimeKey, "deal_count")) {
+                        jedisCluster.hincrBy(realtimeKey, "deal_count", 0)
+                        jedisCluster.expireAt(realtimeKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
+                      }
+                      jedisCluster.hincrBy(realtimeKey, "deal_count", 1)
+                      jedisCluster.hincrByFloat(realtimeKey, "deal_balance", balance.toDouble)
                     }
                   }
                 }
