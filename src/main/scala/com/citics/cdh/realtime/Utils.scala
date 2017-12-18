@@ -81,7 +81,7 @@ object Utils {
   jedisClusterNodes.add(new HostAndPort("10.23.152.240", 7000))
   jedisClusterNodes.add(new HostAndPort("10.23.152.240", 7001))
   val redisClientRelKey = "realtime:crm:client_rel:client_id:%s"
-  val redisStaffInfoKey = "realtime:crm:staff_info:staff_id:%s:date:%s"
+  val redisStaffInfoKey = "realtime:crm:staff_info:staff_id:%s"
   val redisAggregateRealtimeKey = "realtime:crm:aggregate:realtime:staff_id:%s"
   val redisAggregateTopdealKey  = "realtime:crm:aggregate:realtime:top:staff_id:%s"
   val redisAggregateEntrustKey  = "realtime:crm:aggregate:entrust:staff_id:%s"
