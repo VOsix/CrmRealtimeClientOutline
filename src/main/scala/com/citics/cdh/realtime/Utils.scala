@@ -188,4 +188,30 @@ object Utils {
     }
     rst
   }
+
+  def otcOrderTypeConvert = (trd_id: String) => {
+    trd_id match {
+      case "110" => "认购"
+      case "111" => "申购"
+      case "112" => "赎回"
+      case _ => ""
+    }
+  }
+
+  def otcTimestampConvert = (time: String) => {
+    //转换为yyyy-MM-dd HH:mm:ss格式
+    time.replaceFirst(":", " ").substring(0, 19)
+  }
+
+  def otcAmtConvert = (amt: String, qty: String) => {
+    if (amt.toLong == 0) {
+      qty.toLong / 100
+    } else {
+      amt.toLong /100
+    }
+  }
+
+  def otcCrtPositionStr = (timeStamp: String, sno: String) => {
+    timeStamp.split("\\D").mkString + sno
+  }
 }
