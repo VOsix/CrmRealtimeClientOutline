@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import kafka.serializer.StringDecoder
 import org.apache.hadoop.hbase.TableName
-import org.apache.hadoop.hbase.client.{Connection, Put, Table}
+import org.apache.hadoop.hbase.client.{Connection, Get, Put, Table}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.streaming.{Seconds, StreamingContext}
@@ -48,6 +48,12 @@ object OfentrustDetails {
       }
     })
 
+    val updateRecords = lines.filter(str => str.contains(Utils.updateOpt)).map(u => {
+      Utils.updateRecordsConvert(u) match {
+        case Some(m) => m
+      }
+    })
+
     insertRecords.foreachRDD(rdd => {
 
       HiveUtils.readBusinflagFromHive(sc, hvc)
@@ -83,21 +89,25 @@ object OfentrustDetails {
                          "e.entrust_price is not null and " +
                          "e.deal_share is not null and " +
                          "e.balance is not null").repartition(10).persist()
+//        df.show(10)
 
         df.foreachPartition(iter => {
 
           var jedisCluster: JedisCluster = null
           var hbaseConnect: Connection = null
-          var table: Table = null
+          var tableDetails: Table = null
+          var tableMapping: Table = null
 
           try {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
             hbaseConnect = HbaseUtils.getConnect()
-            val tableName = TableName.valueOf(Utils.hbaseTEntrustDetails)
-            table = hbaseConnect.getTable(tableName)
+            var tableName = TableName.valueOf(Utils.hbaseTOfentrustDetails)
+            tableDetails = hbaseConnect.getTable(tableName)
+            tableName = TableName.valueOf(Utils.hbaseTOfentrustMapping)
+            tableMapping = hbaseConnect.getTable(tableName)
 
             for (r <- iter) {
-              val key = String.format(Utils.redisClientRelKey, r(3).toString)
+              val key = String.format(Utils.redisClientRelKey, r(2).toString)
               val client = jedisCluster.hgetAll(key)
 
               if (!client.isEmpty) {
@@ -118,6 +128,7 @@ object OfentrustDetails {
                 val price = r(7).toString
                 val deal_share = r(8).toString
                 val balance = r(9).toString
+                val entrust_status = r(10).toString
 
                 for (i <- staff_list) {
 
@@ -130,7 +141,7 @@ object OfentrustDetails {
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
 
-                  if (table.checkAndPut(Bytes.toBytes(rowkey), Bytes.toBytes("cf"), Bytes.toBytes("exist"), null, putTry)) {
+                  if (tableDetails.checkAndPut(Bytes.toBytes(rowkey), Bytes.toBytes("cf"), Bytes.toBytes("exist"), null, putTry)) {
                     //检验hbase无此明细 确保重提唯一性
                     //hbase 记录明细
                     val put = new Put(Bytes.toBytes(rowkey))
@@ -144,12 +155,18 @@ object OfentrustDetails {
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("price"), Bytes.toBytes(price))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("deal_share"), Bytes.toBytes(deal_share))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("balance"), Bytes.toBytes(balance))
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("entrust_status"), Bytes.toBytes(entrust_status))
 
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_name"), Bytes.toBytes(staff_name))
 
-                    table.put(put)
+                    tableDetails.put(put)
+
+                    //记录postion_str与rowkey映射关系
+                    val putMapping = new Put(Bytes.toBytes(position_str))
+                    putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes(rowkey), Bytes.toBytes("1"))
+                    tableMapping.put(putMapping)
 
                     //当日聚合统计
                     if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
@@ -168,8 +185,10 @@ object OfentrustDetails {
           } finally {
             if (jedisCluster != null)
               jedisCluster.close()
-            if (table != null)
-              table.close()
+            if (tableDetails != null)
+              tableDetails.close()
+            if (tableMapping != null)
+              tableMapping.close()
             if (hbaseConnect != null)
               hbaseConnect.close()
           }
@@ -177,6 +196,83 @@ object OfentrustDetails {
 
         df.unpersist()
       }
+    })
+
+    updateRecords.foreachRDD(rdd => {
+      val rdd1 = rdd.filter(m => (m.contains("ENTRUST_STATUS") || m.contains("ENTRUST_PRICE") ||
+                                  m.contains("DEAL_SHARE") || m.contains("BALANCE")) && m.contains("POSITION_STR"))
+      //相同postion_str 到一个分区 对应操作按pos排序
+      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(10).map(x => {
+        (x._1, x._2.toList.sortWith((m1, m2) => {
+          m1("pos")._1 < m2("pos")._1
+        }))
+      })
+
+      rdd2.foreachPartition(iter => {
+
+        var hbaseConnect: Connection = null
+        var tableMapping: Table = null
+        var tableDetails: Table = null
+
+        try {
+          hbaseConnect = HbaseUtils.getConnect()
+          var tableName = TableName.valueOf(Utils.hbaseTOfentrustMapping)
+          tableMapping = hbaseConnect.getTable(tableName)
+          tableName = TableName.valueOf(Utils.hbaseTOfentrustDetails)
+          tableDetails = hbaseConnect.getTable(tableName)
+
+          for ((s, l) <- iter) {
+
+            println(s"${s}: ${l}")
+            val rowkey = s
+            val get = new Get(Bytes.toBytes(rowkey))
+            val rst = tableMapping.get(get)
+
+            if (!rst.isEmpty) {
+              //对应关系
+              val columns = rst.rawCells().map(c => Bytes.toString(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength))
+
+              for (m <- l) {
+                //m对应一条update记录
+                val entrust_status = m.get("ENTRUST_STATUS")
+                val entrust_price = m.get("ENTRUST_PRICE")
+                val deal_share = m.get("DEAL_SHARE")
+                val balance = m.get("BALANCE")
+
+                columns.map(k => {
+                  val put = new Put(Bytes.toBytes(k))
+                  if (!entrust_status.isEmpty) {
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("entrust_status"), Bytes.toBytes(entrust_status.get._2))
+                  }
+                  if (!entrust_price.isEmpty) {
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("price"), Bytes.toBytes(entrust_price.get._2))
+                  }
+                  if (!deal_share.isEmpty) {
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("deal_share"), Bytes.toBytes(deal_share.get._2))
+                  }
+                  if (!balance.isEmpty) {
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("balance"), Bytes.toBytes(balance.get._2))
+                  }
+                  tableDetails.put(put)
+                })
+              }
+            } else {
+              logger.warn(s"position_str: ${rowkey} not find")
+            }
+          }
+        } catch {
+          case ex: Exception => {
+            ex.printStackTrace()
+          }
+        } finally {
+          if (tableMapping != null)
+            tableMapping.close()
+          if (tableDetails != null)
+            tableDetails.close()
+          if (hbaseConnect != null)
+            hbaseConnect.close()
+        }
+      })
     })
 
     ssc.start()

@@ -157,7 +157,7 @@ object CtstentrustDetails {
 
                   //staff_id 逆序 同一员工下按position_str排序
                   val arr = Array(staff_id.reverse, Array(position_str.substring(0, 4),position_str.substring(4,6),position_str.substring(6,8)).mkString("-"),
-                                  position_str, client_name, fund_account, stkcode)
+                                  position_str, client_name, fund_account)
                   val rowkey = arr.mkString("|")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))

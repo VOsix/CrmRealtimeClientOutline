@@ -4,13 +4,14 @@ import java.text.SimpleDateFormat
 import java.util
 import java.util.Calendar
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import org.json4s.{DefaultFormats, NoTypeHints}
 import org.json4s.native.{Json, Serialization}
-import org.json4s.native.Serialization.write
 import org.slf4j.LoggerFactory
 import redis.clients.jedis.{HostAndPort, JedisCluster, JedisPoolConfig}
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.util.parsing.json.JSON
 
 /**
@@ -49,10 +50,11 @@ object Utils {
   val hbaseTOptrealtimeDetails = "realtime:client_outline_optrealtime_details"
   val hbaseTOptentrustDetails = "realtime:client_outline_optentrust_details"
 
+  val hbaseTCtstentrustDetails = "realtime:client_outline_ctstentrust_details"
   val hbaseTOfentrustDetails = "realtime:client_outline_ofentrust_details"
+  val hbaseTOfentrustMapping = "realtime:client_outline_ofentrust_mapping"
   val hbaseTOtcbookorderDetails = "realtime:client_outline_otcborder_details"
   val hbaseTOtcorderDetails = "realtime:client_outline_otcorder_details"
-  val hbaseTCtstentrustDetails = "realtime:client_outline_ctstentrust_details"
   val hbaseTStockjourDetails = "realtime:client_outline_stockjour_details"
 
 
@@ -103,19 +105,24 @@ object Utils {
     }
   }
 
-  def updateRecordsConvert(u: String): Option[String] = {
-    u match {
-      case updatePattern(bf, af) => {
-        val before = json2Map(bf)
-        val after = json2Map(af)
-        val map = new mutable.HashMap[String, List[Any]]()
-        for((k,v) <- before.iterator) {
-          map += (k -> List(v, after(k)))
-        }
-        implicit val formats = Serialization.formats(NoTypeHints)
-        Some(write(map))
+  def updateRecordsConvert(u: String): Option[mutable.Map[String, (String, String)]] = {
+    val rst = new mutable.HashMap[String, (String, String)]()
+    val mapper = new ObjectMapper()
+    mapper.registerModule(DefaultScalaModule)
+
+    val map = mapper.readValue(u, classOf[immutable.Map[String, Any]])
+    if (map.contains("before") && map.contains("after") && map.contains("pos")) {
+      val before = map("before").asInstanceOf[Map[String, Any]].map(kv => (kv._1, kv._2.toString))
+      val after = map("after").asInstanceOf[Map[String, Any]].map(kv => (kv._1, kv._2.toString))
+      val pos = map("pos").asInstanceOf[String]
+
+      for ((k, v) <- before) {
+        rst += (k -> (v, after(k)))
       }
-      case _ => None
+      rst += ("pos" -> (pos, pos))
+      Some(rst)
+    } else {
+      None
     }
   }
 
@@ -148,7 +155,7 @@ object Utils {
 
     var rst: String = ""
     try {
-      val datetime = String.format("%8s %9s", date.toString, time.toString)
+      val datetime = f"${date.toString}%8s ${time.toString.toInt}%09d"
       val dt = new SimpleDateFormat("yyyyMMdd HHmmssSSS").parse(datetime)
       val df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
       rst = df.format(dt)
@@ -167,7 +174,7 @@ object Utils {
 
     var rst: String = ""
     try {
-      val datetime = String.format("%8s %6s", date.toString, time.toString)
+      val datetime = f"${date.toString}%8s ${time.toString.toInt}%06d"
       val dt = new SimpleDateFormat("yyyyMMdd HHmmss").parse(datetime)
       val df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
       rst = df.format(dt)
@@ -175,23 +182,10 @@ object Utils {
       case ex: Exception => {
         //解析异常 使用当前时间戳
         rst = getSpecDay(0, "yyyy-MM-dd HH:mm:ss")
-        logger.warn("{} parse to 'yyyyMMdd HHmmss' error")
+        logger.warn("parse to 'yyyyMMdd HHmmss' error")
         ex.printStackTrace()
       }
     }
     rst
   }
-
-  def getStaffItemIndex(jedisCluster: JedisCluster, staff_id: String, time: String, key: String): String = {
-
-    //按当日
-    val index = jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id, time.split(" ")(0)), key, 1)
-
-    val arr = time.split(" ")(1).split(":").map(_.toInt)
-    val seconds = arr(0) * 60 * 60 + arr(1) * 60 + arr(2)
-
-    //1开头 当日秒数5位 顺序号8位
-    f"1$seconds%05d$index%08d"
-  }
-
 }
