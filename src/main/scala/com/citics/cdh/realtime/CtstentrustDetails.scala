@@ -57,7 +57,7 @@ object CtstentrustDetails {
 
       if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "POSITION_STR", "BRANCH_NO", "FUND_ACCOUNT", "CLIENT_ID",
                                       "CURR_DATE", "CURR_TIME", "STOCK_CODE", "ENTRUST_PRICE", "ENTRUST_AMOUNT", "EXCHANGE_TYPE",
-                                      "OP_ENTRUST_WAY", "ENTRUST_BS", "MONEY_TYPE")) {
+                                      "OP_ENTRUST_WAY", "ENTRUST_BS")) {
 
         entrust_details.registerTempTable("entrust_details")
 
@@ -88,7 +88,7 @@ object CtstentrustDetails {
                          "left outer join tmp_exchangetype et " +
                          "on e.exchange_type = et.subentry " +
                          "left outer join tmp_moneytype mt " +
-                         "on e.money_type = mt.subentry " +
+                         "on mt.subentry = c.money_type " +
                          "where e.entrust_type = '0' and " +
                          "e.position_str is not null and " +
                          "e.branch_no is not null and " +
@@ -156,7 +156,8 @@ object CtstentrustDetails {
                   val staff_name = i.getOrElse("name", "")
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, client_name, fund_account, stkcode)
+                  val arr = Array(staff_id.reverse, Array(position_str.substring(0, 4),position_str.substring(4,6),position_str.substring(6,8)).mkString("-"),
+                                  position_str, client_name, fund_account, stkcode)
                   val rowkey = arr.mkString("|")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
@@ -187,7 +188,7 @@ object CtstentrustDetails {
                     table.put(put)
 
                     //当日聚合统计
-                    if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                    if (position_str.substring(0, 8) == Utils.getSpecDay(0, "yyyyMMdd")) {
                       //记录条数汇总
                       jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "ctstentrust_count", 1)
                     }
