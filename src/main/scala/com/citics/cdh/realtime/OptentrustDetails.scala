@@ -100,7 +100,7 @@ object OptentrustDetails {
                          "e.stock_code is not null and " +
                          "e.option_code is not null and " +
                          "e.opt_entrust_price is not null and " +
-                         "e.entrust_amount is not null").repartition(10).persist()
+                         "e.entrust_amount is not null").repartition(10)
 
         df.foreachPartition(iter => {
 
@@ -212,8 +212,6 @@ object OptentrustDetails {
               hbaseConnect.close()
           }
         })
-
-        df.unpersist()
       }
     })
 

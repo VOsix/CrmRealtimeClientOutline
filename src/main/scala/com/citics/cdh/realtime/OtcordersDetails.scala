@@ -169,8 +169,6 @@ object OtcordersDetails {
               hbaseConnect.close()
           }
         })
-
-        df.unpersist()
       }
     })
 

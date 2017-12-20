@@ -88,7 +88,7 @@ object OfentrustDetails {
                          "e.stock_name is not null and " +
                          "e.entrust_price is not null and " +
                          "e.deal_share is not null and " +
-                         "e.balance is not null").repartition(10).persist()
+                         "e.balance is not null").repartition(10)
 //        df.show(10)
 
         df.foreachPartition(iter => {
@@ -193,8 +193,6 @@ object OfentrustDetails {
               hbaseConnect.close()
           }
         })
-
-        df.unpersist()
       }
     })
 

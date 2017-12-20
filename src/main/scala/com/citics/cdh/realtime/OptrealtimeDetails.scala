@@ -102,7 +102,7 @@ object OptrealtimeDetails {
                          "r.business_amount is not null and " +
                          "r.business_balance is not null and " +
                          "r.real_status is not null and " +
-                         "r.real_type is not null").repartition(10).persist()
+                         "r.real_type is not null").repartition(10)
 //        df.show(10)
 
         df.foreachPartition(iter => {
@@ -213,8 +213,6 @@ object OptrealtimeDetails {
               hbaseConnect.close()
           }
         })
-
-        df.unpersist()
       }
     })
 

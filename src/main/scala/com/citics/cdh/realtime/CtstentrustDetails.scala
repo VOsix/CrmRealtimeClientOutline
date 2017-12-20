@@ -98,7 +98,7 @@ object CtstentrustDetails {
                          "e.curr_time is not null and " +
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
-                         "e.entrust_amount is not null").repartition(10).persist()
+                         "e.entrust_amount is not null").repartition(10)
 
         df.foreachPartition(iter => {
 
@@ -210,8 +210,6 @@ object CtstentrustDetails {
               hbaseConnect.close()
           }
         })
-
-        df.unpersist()
       }
     })
 

@@ -110,7 +110,7 @@ object RealtimeDetails {
                          "r.business_balance is not null and " +
                          "r.branch_no is not null and " +
                          "r.real_status is not null and " +
-                         "r.real_type is not null").repartition(20).persist()
+                         "r.real_type is not null").repartition(20)
 //        df.show(10)
 
         df.foreachPartition(iter => {
@@ -252,8 +252,6 @@ object RealtimeDetails {
               hbaseConnect.close()
           }
         })
-
-        df.unpersist()
       }
     })
 

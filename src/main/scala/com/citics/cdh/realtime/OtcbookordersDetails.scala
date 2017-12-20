@@ -169,8 +169,6 @@ object OtcbookordersDetails {
               hbaseConnect.close()
           }
         })
-
-        df.unpersist()
       }
     })
 

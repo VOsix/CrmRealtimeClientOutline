@@ -99,7 +99,7 @@ object EntrustDetails {
                          "e.curr_time is not null and " +
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
-                         "e.entrust_amount is not null").repartition(20).persist()
+                         "e.entrust_amount is not null").repartition(20)
 
         df.foreachPartition(iter => {
 
@@ -220,8 +220,6 @@ object EntrustDetails {
               hbaseConnect.close()
           }
         })
-
-        df.unpersist()
       }
     })
 
