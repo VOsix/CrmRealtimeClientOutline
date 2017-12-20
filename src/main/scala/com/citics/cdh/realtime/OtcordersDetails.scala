@@ -21,7 +21,7 @@ import scala.collection.immutable
 /**
   * Created by 029188 on 2017-12-5.
   */
-object OtcordersDetail {
+object OtcordersDetails {
 
   val conf = new SparkConf().setAppName("crmClientOutline_otcordersDetail")
   val logger = LoggerFactory.getLogger(getClass)
@@ -50,6 +50,7 @@ object OtcordersDetail {
 
     insertRecords.foreachRDD(rdd => {
 
+      HiveUtils.query_init(sc)
       val entrust_details = hvc.read.json(rdd)
 
       if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "APP_TIMESTAMP", "APP_SNO", "CUST_CODE", "CUACCT_CODE",
@@ -68,7 +69,7 @@ object OtcordersDetail {
                          "e.inst_code as fund_code, " +
                          "e.inst_sname as fund_name, " +
                          "otcAmtConvert(e.ord_amt, e.ord_qty) as amt, " +
-                         "orderTypeConvert(e.trd_id) as ord_type, " +
+                         "otcOrderTypeConvert(e.trd_id) as ord_type, " +
                          "otcTimestampConvert(e.app_timestamp) as ord_time " +
                          "from entrust_details e " +
                          "where e.cancel_flag  = '0' and " +
@@ -80,7 +81,7 @@ object OtcordersDetail {
                          "e.ord_amt is not null and " +
                          "e.ord_qty is not null and " +
                          "e.trd_id is not null and " +
-                         "e.app_timestamp is not null")
+                         "e.app_timestamp is not null").repartition(10)
 
         df.foreachPartition(iter => {
 
