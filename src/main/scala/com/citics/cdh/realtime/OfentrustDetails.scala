@@ -164,7 +164,7 @@ object OfentrustDetails {
                     tableDetails.put(put)
 
                     //记录postion_str与rowkey映射关系
-                    val putMapping = new Put(Bytes.toBytes(position_str))
+                    val putMapping = new Put(Bytes.toBytes(position_str.reverse))
                     putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes(rowkey), Bytes.toBytes("1"))
                     tableMapping.put(putMapping)
 
@@ -222,7 +222,7 @@ object OfentrustDetails {
           for ((s, l) <- iter) {
 
             println(s"${s}: ${l}")
-            val rowkey = s
+            val rowkey = s.reverse
             val get = new Get(Bytes.toBytes(rowkey))
             val rst = tableMapping.get(get)
 
@@ -251,6 +251,7 @@ object OfentrustDetails {
                   if (!balance.isEmpty) {
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("balance"), Bytes.toBytes(balance.get._2))
                   }
+                  put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("last_update"), Bytes.toBytes(Utils.getSpecDay(0, "yyyy-MM-dd HH:mm:ss")))
                   tableDetails.put(put)
                 })
               }
