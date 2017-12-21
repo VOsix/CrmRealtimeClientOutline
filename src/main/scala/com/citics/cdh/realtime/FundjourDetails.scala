@@ -211,7 +211,7 @@ object FundjourDetails {
                       //大于5w资金转出
                       if (business_flag == "2042") {
                         val fundoutKey = String.format(Utils.redisAggregateFundOutKey, staff_id)
-                        val member = String.format("bno:%s:bname:%s:fund:%s:cn:%s:mt:%s:bus:%s:cid:%s",
+                        val member = String.format("bno:%s:bname:%s:fund:%s:cn:%s:mt:%s:remark:%s:cid:%s",
                           branch_no, branch_name, fund_account, client_name, moneytype_name, remark, client_id)
 
                         if (jedisCluster.zcard(fundoutKey) == 0) {

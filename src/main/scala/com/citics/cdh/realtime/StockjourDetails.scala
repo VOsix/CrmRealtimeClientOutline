@@ -178,7 +178,8 @@ object StockjourDetails {
 
                       //实时汇总部分
                       val stockjourKey = String.format(Utils.redisAggregateStockjourKey, staff_id)
-                      val member = fund_account
+                      val member = String.format("bno:%s:bname:%s:fund:%s:cn:%s:mt:%s:remark:%s:cid:%s",
+                        branch_no, branch_name, fund_account, client_name, moneytype_name, remark, client_id)
 
                       if (jedisCluster.zcard(stockjourKey) == 0) {
                         jedisCluster.zincrby(stockjourKey, 0.00, member)
