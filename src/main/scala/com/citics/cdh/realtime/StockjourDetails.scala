@@ -178,13 +178,13 @@ object StockjourDetails {
 
                       //实时汇总部分
                       val stockjourKey = String.format(Utils.redisAggregateStockjourKey, staff_id)
+                      val member = fund_account
 
-                      if (jedisCluster.hexists(stockjourKey, fund_account)) {
-                        jedisCluster.hincrByFloat(stockjourKey, fund_account, 0.00)
+                      if (jedisCluster.zcard(stockjourKey) == 0) {
+                        jedisCluster.zincrby(stockjourKey, 0.00, member)
                         jedisCluster.expireAt(stockjourKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
                       }
-
-                      jedisCluster.hincrByFloat(stockjourKey, fund_account, out_asset)
+                      jedisCluster.zincrby(stockjourKey, out_asset, member)
                     }
                   }
                 }
