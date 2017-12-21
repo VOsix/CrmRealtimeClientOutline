@@ -42,6 +42,7 @@ object Utils {
   val hbaseTKafkaOffset     = "realtime:kafka_offset"
   val hbaseTStkcode = "EDM_REALTIME:STKCODE"
   val hbaseTOptcode = "EDM_REALTIME:OPTCODE"
+  val hbaseTPrice   = "EDM_REALTIME:PRICE"
   val hbaseTRealtimeDetails = "realtime:client_outline_realtime_details"
   val hbaseTEntrustDetails  = "realtime:client_outline_entrust_details"
   val hbaseTFoudjourDetails  = "realtime:client_outline_fundjour_details"
@@ -89,7 +90,7 @@ object Utils {
   val redisAggregateEntrustKey  = "realtime:crm:aggregate:entrust:staff_id:%s"
   val redisAggregateFundjourKey = "realtime:crm:aggregate:fundjour:staff_id:%s"
   val redisAggregateFundOutKey  = "realtime:crm:aggregate:fundjour:out:staff_id:%s"
-
+  val redisAggregateStockjourKey = "realtime:crm:aggregate:stockjour:out:staff_id:%s"
 
   val insertOpt = "\"op_type\":\"I\""
   val updateOpt = "\"op_type\":\"U\""

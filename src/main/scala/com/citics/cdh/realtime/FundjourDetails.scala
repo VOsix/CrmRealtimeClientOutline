@@ -147,7 +147,7 @@ object FundjourDetails {
 
                   //staff_id 逆序 同一员工下按position_str排序
                   val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, fund_account)
-                  val rowkey = arr.mkString("|")
+                  val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
 
