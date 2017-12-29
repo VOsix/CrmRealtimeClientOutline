@@ -89,7 +89,7 @@ object StockjourDetails {
                          "s.branch_no is not null and " +
                          "s.occur_amount is not null and " +
                          "s.money_type is not null").repartition(10)
-        df.show(10)
+//        df.show(10)
 
         df.foreachPartition(iter => {
 
