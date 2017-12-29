@@ -130,11 +130,11 @@ object StockjourDetails {
                 val occur_amount = r(9).toString
                 val remark = r(10).toString
 
-                val keyPrice = s"${exchange_type}|${stock_code}|${Utils.getSpecDay(0, "yyyyMMdd")}"
+                val keyPrice = s"${exchange_type}|${stock_code}"
                 val get = new Get(Bytes.toBytes(keyPrice))
                 get.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("LAST_PRICE"))
-                val lastPrice = Bytes.toDouble(tablePrice.get(get).getValue(Bytes.toBytes("cf"), Bytes.toBytes("LAST_PRICE")))
-                val out_asset = lastPrice * occur_amount.toInt
+                val lastPrice = Bytes.toString(tablePrice.get(get).getValue(Bytes.toBytes("cf"), Bytes.toBytes("LAST_PRICE")))
+                val out_asset = f"${lastPrice.toDouble * occur_amount.toDouble}%.2f"
 
                 for (i <- staff_list) {
 
@@ -161,8 +161,8 @@ object StockjourDetails {
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exchange_type"), Bytes.toBytes(exchange_type))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("stock_code"), Bytes.toBytes(stock_code))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("occur_amount"), Bytes.toBytes(occur_amount))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("lastPrice"), Bytes.toBytes(lastPrice.toString))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("out_asset"), Bytes.toBytes(out_asset.toString))
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("lastPrice"), Bytes.toBytes(lastPrice))
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("out_asset"), Bytes.toBytes(out_asset))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("remark"), Bytes.toBytes(remark))
 
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
@@ -185,7 +185,7 @@ object StockjourDetails {
                         jedisCluster.zincrby(stockjourKey, 0.00, member)
                         jedisCluster.expireAt(stockjourKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
                       }
-                      jedisCluster.zincrby(stockjourKey, out_asset, member)
+                      jedisCluster.zincrby(stockjourKey, out_asset.toDouble, member)
                     }
                   }
                 }
