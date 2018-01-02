@@ -1,4 +1,4 @@
-package com.citics.cdh.realtime
+package com.citics.cdh.realtime.clientoutline
 
 import java.util
 
@@ -110,7 +110,7 @@ object RealtimeDetails {
                          "r.business_balance is not null and " +
                          "r.branch_no is not null and " +
                          "r.real_status is not null and " +
-                         "r.real_type is not null").repartition(20)
+                         "r.real_type is not null").repartition(10)
 //        df.show(10)
 
         df.foreachPartition(iter => {

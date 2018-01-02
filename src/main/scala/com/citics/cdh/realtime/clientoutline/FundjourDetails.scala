@@ -1,4 +1,4 @@
-package com.citics.cdh.realtime
+package com.citics.cdh.realtime.clientoutline
 
 import java.util
 
@@ -99,7 +99,7 @@ object FundjourDetails {
                          "f.post_balance is not null and " +
                          "f.occur_balance is not null and " +
                          "f.bank_no is not null and " +
-                         "f.business_flag is not null").repartition(20)
+                         "f.business_flag is not null").repartition(10)
 
         df.foreachPartition(iter => {
 

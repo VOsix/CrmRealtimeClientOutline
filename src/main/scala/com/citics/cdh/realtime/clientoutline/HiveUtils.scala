@@ -1,4 +1,4 @@
-package com.citics.cdh.realtime
+package com.citics.cdh.realtime.clientoutline
 
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.hive.HiveContext

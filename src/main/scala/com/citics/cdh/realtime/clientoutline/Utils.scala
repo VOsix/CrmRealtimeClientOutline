@@ -1,4 +1,4 @@
-package com.citics.cdh.realtime
+package com.citics.cdh.realtime.clientoutline
 
 import java.text.SimpleDateFormat
 import java.util

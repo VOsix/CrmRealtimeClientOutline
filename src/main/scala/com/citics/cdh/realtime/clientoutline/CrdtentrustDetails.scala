@@ -1,4 +1,4 @@
-package com.citics.cdh.realtime
+package com.citics.cdh.realtime.clientoutline
 
 import java.util
 
@@ -98,7 +98,7 @@ object CrdtentrustDetails {
                          "e.curr_time is not null and " +
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
-                         "e.entrust_amount is not null").repartition(10)
+                         "e.entrust_amount is not null").repartition(5)
 
         df.foreachPartition(iter => {
 

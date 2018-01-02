@@ -1,4 +1,4 @@
-package com.citics.cdh.realtime
+package com.citics.cdh.realtime.clientoutline
 
 import java.util
 
@@ -9,21 +9,21 @@ import kafka.serializer.StringDecoder
 import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.client.{Connection, Put, Table}
 import org.apache.hadoop.hbase.util.Bytes
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.streaming.{Seconds, StreamingContext}
+import org.apache.spark.{SparkConf, SparkContext}
 import org.slf4j.LoggerFactory
 import redis.clients.jedis.JedisCluster
 
-import collection.JavaConversions._
+import scala.collection.JavaConversions._
 import scala.collection.immutable
 
 /**
   * Created by 029188 on 2017-12-5.
   */
-object EntrustDetails {
+object CtstentrustDetails {
 
-  val conf = new SparkConf().setAppName("crmClientOutline_entrustDetails")
+  val conf = new SparkConf().setAppName("crmClientOutline_ctstentrustDetails")
   val logger = LoggerFactory.getLogger(getClass)
 
   def main(args: Array[String]): Unit = {
@@ -31,10 +31,9 @@ object EntrustDetails {
     val sc = new SparkContext(conf)
     val ssc = new StreamingContext(sc, Seconds(10))
     val hvc = new HiveContext(sc)
-    import hvc.implicits._
 
     sc.setLogLevel("WARN")
-    val kafkaReader = new KafkaReader[String, String, StringDecoder, StringDecoder](ssc, Utils.brokerList, Utils.topicOggEntrust,
+    val kafkaReader = new KafkaReader[String, String, StringDecoder, StringDecoder](ssc, Utils.brokerList, Utils.topicOggCtstentrust,
       Utils.hbaseTKafkaOffset, Utils.hbaseHosts, Utils.hbasePort)
 
     val kafkaStream = kafkaReader.getKafkaStream()
@@ -58,7 +57,7 @@ object EntrustDetails {
 
       if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "POSITION_STR", "BRANCH_NO", "FUND_ACCOUNT", "CLIENT_ID",
                                       "CURR_DATE", "CURR_TIME", "STOCK_CODE", "ENTRUST_PRICE", "ENTRUST_AMOUNT", "EXCHANGE_TYPE",
-                                      "OP_ENTRUST_WAY", "ENTRUST_BS", "MONEY_TYPE")) {
+                                      "OP_ENTRUST_WAY", "ENTRUST_BS")) {
 
         entrust_details.registerTempTable("entrust_details")
 
@@ -66,16 +65,16 @@ object EntrustDetails {
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1204").registerTempTable("tmp_entrustbs")
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1301").registerTempTable("tmp_exchangetype")
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1101").registerTempTable("tmp_moneytype")
-        hvc.udf.register("concatDateTime", Utils.concatDateTime)
+        hvc.udf.register("concatDateTime", Utils.concatDateTime2)
 
         val df = hvc.sql("select e.position_str, e.branch_no, e.fund_account, e.client_id, " +
-                         "concatDateTime(e.curr_date, e.curr_time) as curr_time, " +
+                         "'' as curr_time, " + //柜台数据不规范 按空返回
                          "e.stock_code as stkcode, COALESCE(c.stock_name,'') as stkname, " +
                          "COALESCE(mt.DICT_PROMPT,'') as money_type_name, " +
                          "COALESCE(eb.DICT_PROMPT,'') as remark, " +
-                         "e.entrust_price as entrust_price, " +
+                         "100.00 as entrust_price, " +
                          "e.entrust_amount as entrust_amount, " +
-                         "round(e.entrust_price*e.entrust_amount,2) as entrust_balance, " +
+                         "round(100*e.entrust_amount,2) as entrust_balance, " +
                          "COALESCE(ew.DICT_PROMPT,'') as op_entrust_way_name, " +
                          "COALESCE(et.DICT_PROMPT,'') as market_name, " +
                          "e.exchange_type as exchange_type " +
@@ -89,7 +88,7 @@ object EntrustDetails {
                          "left outer join tmp_exchangetype et " +
                          "on e.exchange_type = et.subentry " +
                          "left outer join tmp_moneytype mt " +
-                         "on e.money_type = mt.subentry " +
+                         "on mt.subentry = c.money_type " +
                          "where e.entrust_type = '0' and " +
                          "e.position_str is not null and " +
                          "e.branch_no is not null and " +
@@ -99,7 +98,7 @@ object EntrustDetails {
                          "e.curr_time is not null and " +
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
-                         "e.entrust_amount is not null").repartition(20)
+                         "e.entrust_amount is not null").repartition(5)
 
         df.foreachPartition(iter => {
 
@@ -110,7 +109,7 @@ object EntrustDetails {
           try {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
             hbaseConnect = HbaseUtils.getConnect()
-            val tableName = TableName.valueOf(Utils.hbaseTEntrustDetails)
+            val tableName = TableName.valueOf(Utils.hbaseTCtstentrustDetails)
             table = hbaseConnect.getTable(tableName)
 
             for (r <- iter) {
@@ -157,7 +156,8 @@ object EntrustDetails {
                   val staff_name = i.getOrElse("name", "")
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, client_name, fund_account, stkcode)
+                  val arr = Array(staff_id.reverse, Array(position_str.substring(0, 4),position_str.substring(4,6),position_str.substring(6,8)).mkString("-"),
+                                  position_str, client_name, fund_account)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
@@ -188,19 +188,9 @@ object EntrustDetails {
                     table.put(put)
 
                     //当日聚合统计
-                    if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                    if (position_str.substring(0, 8) == Utils.getSpecDay(0, "yyyyMMdd")) {
                       //记录条数汇总
-                      jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "entrust_count", 1)
-
-                      //实时汇总部分
-                      val entrustKey = String.format(Utils.redisAggregateEntrustKey, staff_id)
-
-                      if (!jedisCluster.hexists(entrustKey, "entrust_count")) {
-                        jedisCluster.hincrBy(entrustKey, "entrust_count", 0)
-                        jedisCluster.expireAt(entrustKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
-                      }
-                      jedisCluster.hincrBy(entrustKey, "entrust_count", 1)
-                      jedisCluster.hincrByFloat(entrustKey, "entrust_balance", entrust_balance.toDouble)
+                      jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "ctstentrust_count", 1)
                     }
                   }
                 }

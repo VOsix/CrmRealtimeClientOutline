@@ -1,4 +1,4 @@
-package com.citics.cdh.realtime
+package com.citics.cdh.realtime.clientoutline
 
 import java.util
 
@@ -21,9 +21,9 @@ import scala.collection.immutable
 /**
   * Created by 029188 on 2017-12-5.
   */
-object OtcbookordersDetails {
+object OtcordersDetails {
 
-  val conf = new SparkConf().setAppName("crmClientOutline_otcbookordersDetail")
+  val conf = new SparkConf().setAppName("crmClientOutline_otcordersDetail")
   val logger = LoggerFactory.getLogger(getClass)
 
   def main(args: Array[String]): Unit = {
@@ -33,7 +33,7 @@ object OtcbookordersDetails {
     val hvc = new HiveContext(sc)
 
     sc.setLogLevel("WARN")
-    val kafkaReader = new KafkaReader[String, String, StringDecoder, StringDecoder](ssc, Utils.brokerList, Utils.topicOggOtcbookorder,
+    val kafkaReader = new KafkaReader[String, String, StringDecoder, StringDecoder](ssc, Utils.brokerList, Utils.topicOggOtcorder,
       Utils.hbaseTKafkaOffset, Utils.hbaseHosts, Utils.hbasePort)
 
     val kafkaStream = kafkaReader.getKafkaStream()
@@ -53,7 +53,7 @@ object OtcbookordersDetails {
       HiveUtils.query_init(sc)
       val entrust_details = hvc.read.json(rdd)
 
-      if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "BOOK_TIMESTAMP", "BOOK_SNO", "CUST_CODE", "CUACCT_CODE",
+      if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "APP_TIMESTAMP", "APP_SNO", "CUST_CODE", "CUACCT_CODE",
                                       "INST_CODE", "INST_SNAME", "ORD_AMT", "ORD_QTY", "TRD_ID", "CANCEL_FLAG")) {
 
         entrust_details.registerTempTable("entrust_details")
@@ -63,14 +63,14 @@ object OtcbookordersDetails {
         hvc.udf.register("otcAmtConvert", Utils.otcAmtConvert)
         hvc.udf.register("otcCrtPositionStr", Utils.otcCrtPositionStr)
 
-        val df = hvc.sql("select otcCrtPositionStr(e.book_timestamp, e.book_sno) as position_str, " +
+        val df = hvc.sql("select otcCrtPositionStr(e.app_timestamp, e.app_sno) as position_str, " +
                          "e.cust_code as client_id, " +
                          "e.cuacct_code as fund_account, " +
                          "e.inst_code as fund_code, " +
                          "e.inst_sname as fund_name, " +
                          "otcAmtConvert(e.ord_amt, e.ord_qty) as amt, " +
                          "otcOrderTypeConvert(e.trd_id) as ord_type, " +
-                         "otcTimestampConvert(e.book_timestamp) as ord_time " +
+                         "otcTimestampConvert(e.app_timestamp) as ord_time " +
                          "from entrust_details e " +
                          "where e.cancel_flag  = '0' and " +
                          "e.trd_id in ('110','111','112') and " +
@@ -81,7 +81,7 @@ object OtcbookordersDetails {
                          "e.ord_amt is not null and " +
                          "e.ord_qty is not null and " +
                          "e.trd_id is not null and " +
-                         "e.book_timestamp is not null").repartition(10)
+                         "e.app_timestamp is not null").repartition(5)
 
         df.foreachPartition(iter => {
 
@@ -92,7 +92,7 @@ object OtcbookordersDetails {
           try {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
             hbaseConnect = HbaseUtils.getConnect()
-            val tableName = TableName.valueOf(Utils.hbaseTOtcbookorderDetails)
+            val tableName = TableName.valueOf(Utils.hbaseTOtcorderDetails)
             table = hbaseConnect.getTable(tableName)
 
             for (r <- iter) {
@@ -149,7 +149,7 @@ object OtcbookordersDetails {
                     //当日聚合统计
                     if (ord_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
-                      jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "otcbookorder_count", 1)
+                      jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "otcorder_count", 1)
                     }
                   }
                 }

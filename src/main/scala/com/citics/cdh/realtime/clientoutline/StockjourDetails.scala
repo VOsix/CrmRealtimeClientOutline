@@ -1,4 +1,4 @@
-package com.citics.cdh.realtime
+package com.citics.cdh.realtime.clientoutline
 
 import java.util
 
@@ -88,7 +88,7 @@ object StockjourDetails {
                          "s.curr_time is not null and " +
                          "s.branch_no is not null and " +
                          "s.occur_amount is not null and " +
-                         "s.money_type is not null").repartition(10)
+                         "s.money_type is not null").repartition(5)
 //        df.show(10)
 
         df.foreachPartition(iter => {

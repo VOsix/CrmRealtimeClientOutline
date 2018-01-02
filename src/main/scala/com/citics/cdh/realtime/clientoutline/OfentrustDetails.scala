@@ -1,4 +1,4 @@
-package com.citics.cdh.realtime
+package com.citics.cdh.realtime.clientoutline
 
 import java.util
 
@@ -88,7 +88,7 @@ object OfentrustDetails {
                          "e.stock_name is not null and " +
                          "e.entrust_price is not null and " +
                          "e.deal_share is not null and " +
-                         "e.balance is not null").repartition(10)
+                         "e.balance is not null").repartition(5)
 //        df.show(10)
 
         df.foreachPartition(iter => {
