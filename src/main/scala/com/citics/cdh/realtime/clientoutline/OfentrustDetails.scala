@@ -200,7 +200,7 @@ object OfentrustDetails {
       val rdd1 = rdd.filter(m => (m.contains("ENTRUST_STATUS") || m.contains("ENTRUST_PRICE") ||
                                   m.contains("DEAL_SHARE") || m.contains("BALANCE")) && m.contains("POSITION_STR"))
       //相同postion_str 到一个分区 对应操作按pos排序
-      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(10).map(x => {
+      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(5).map(x => {
         (x._1, x._2.toList.sortWith((m1, m2) => {
           m1("pos")._1 < m2("pos")._1
         }))
@@ -221,7 +221,7 @@ object OfentrustDetails {
 
           for ((s, l) <- iter) {
 
-            println(s"${s}: ${l}")
+//            println(s"${s}: ${l}")
             val rowkey = s.reverse
             val get = new Get(Bytes.toBytes(rowkey))
             val rst = tableMapping.get(get)

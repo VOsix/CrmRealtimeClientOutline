@@ -57,7 +57,7 @@ object CrdtentrustDetails {
 
       if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "POSITION_STR", "BRANCH_NO", "FUND_ACCOUNT", "CLIENT_ID",
                                       "CURR_DATE", "CURR_TIME", "STOCK_CODE", "ENTRUST_PRICE", "ENTRUST_AMOUNT", "EXCHANGE_TYPE",
-                                      "OP_ENTRUST_WAY", "ENTRUST_BS", "MONEY_TYPE")) {
+                                      "OP_ENTRUST_WAY", "ENTRUST_BS", "MONEY_TYPE", "STOCK_TYPE")) {
 
         entrust_details.registerTempTable("entrust_details")
 
@@ -78,8 +78,7 @@ object CrdtentrustDetails {
                          "COALESCE(ew.DICT_PROMPT,'') as op_entrust_way_name, " +
                          "COALESCE(et.DICT_PROMPT,'') as market_name, " +
                          "e.exchange_type as exchange_type, " +
-                         "e.stock_type, " +
-                         "round(e.business_balance,2) as business_balance " +
+                         "e.stock_type " +
                          "from entrust_details e " +
                          "left outer join tmp_stkcode c " +
                          "on e.exchange_type = c.exchange_type and e.stock_code = c.stock_code " +
@@ -137,16 +136,11 @@ object CrdtentrustDetails {
                 val remark = r(8).toString
                 val entrust_price = r(9).toString
                 val entrust_amount = r(10).toString
-                var entrust_balance = r(11).toString
+                val entrust_balance = r(11).toString
                 val op_entrust_way_name = r(12).toString
                 val market_name = r(13).toString
                 val exchange_type = r(14).toString
                 val stock_type = r(15).toString
-                val business_balance = r(16).toString
-
-                if (business_balance.toDouble > 0.001) {
-                  entrust_balance = business_balance
-                }
 
                 if (stkname.length == 0 || moneytype_name.length == 0) {
                   //通过hbase查询

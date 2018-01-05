@@ -45,6 +45,7 @@ object Utils {
   val hbaseTPrice   = "EDM_REALTIME:PRICE"
   val hbaseTRealtimeDetails = "realtime:client_outline_realtime_details"
   val hbaseTEntrustDetails  = "realtime:client_outline_entrust_details"
+  val hbaseTEntrustMapping  = "realtime:client_outline_entrust_mapping"
   val hbaseTFoudjourDetails  = "realtime:client_outline_fundjour_details"
   val hbaseTCrdtrealtiemDetails = "realtime:client_outline_crdtrealtime_details"
   val hbaseTCrdtentrustDetails = "realtime:client_outline_crdtentrust_details"
