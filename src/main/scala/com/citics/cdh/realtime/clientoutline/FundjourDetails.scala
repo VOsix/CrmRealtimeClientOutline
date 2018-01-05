@@ -194,7 +194,7 @@ object FundjourDetails {
                         jedisCluster.expireAt(fundjourKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
                       }
 
-                      if (business_flag != "2317" && business_flag != "2318" && business_flag != "4170") {
+                      if (business_flag == "2041" || business_flag == "2042") {
                         val occur = occur_balance.toDouble
                         if (occur > 0.000001) {
                           jedisCluster.hincrBy(fundjourKey, "in_count", 1)

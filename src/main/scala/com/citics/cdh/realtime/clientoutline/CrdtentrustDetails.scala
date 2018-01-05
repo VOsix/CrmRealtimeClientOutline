@@ -77,7 +77,9 @@ object CrdtentrustDetails {
                          "round(e.entrust_price*e.entrust_amount,2) as entrust_balance, " +
                          "COALESCE(ew.DICT_PROMPT,'') as op_entrust_way_name, " +
                          "COALESCE(et.DICT_PROMPT,'') as market_name, " +
-                         "e.exchange_type as exchange_type " +
+                         "e.exchange_type as exchange_type, " +
+                         "e.stock_type, " +
+                         "round(e.business_balance,2) as business_balance " +
                          "from entrust_details e " +
                          "left outer join tmp_stkcode c " +
                          "on e.exchange_type = c.exchange_type and e.stock_code = c.stock_code " +
@@ -135,10 +137,16 @@ object CrdtentrustDetails {
                 val remark = r(8).toString
                 val entrust_price = r(9).toString
                 val entrust_amount = r(10).toString
-                val entrust_balance = r(11).toString
+                var entrust_balance = r(11).toString
                 val op_entrust_way_name = r(12).toString
                 val market_name = r(13).toString
                 val exchange_type = r(14).toString
+                val stock_type = r(15).toString
+                val business_balance = r(16).toString
+
+                if (business_balance.toDouble > 0.001) {
+                  entrust_balance = business_balance
+                }
 
                 if (stkname.length == 0 || moneytype_name.length == 0) {
                   //通过hbase查询
@@ -156,7 +164,7 @@ object CrdtentrustDetails {
                   val staff_name = i.getOrElse("name", "")
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, client_name, fund_account, stkcode)
+                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, client_name, fund_account, stkcode, stock_type)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
@@ -179,6 +187,7 @@ object CrdtentrustDetails {
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("entrust_balance"), Bytes.toBytes(entrust_balance))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("op_entrust_way_name"), Bytes.toBytes(op_entrust_way_name))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("market_name"), Bytes.toBytes(market_name))
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("stock_type"), Bytes.toBytes(stock_type))
 
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))
