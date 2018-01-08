@@ -17,7 +17,7 @@ import redis.clients.jedis.JedisCluster
 
 object SyncDataToRedis {
 
-  val conf = new SparkConf().setAppName("SyncDataToRedis")
+  val conf = new SparkConf().setAppName("crmClientOutline_syncDataToRedis")
   val logger = LoggerFactory.getLogger(getClass)
 
   def main(args: Array[String]): Unit = {

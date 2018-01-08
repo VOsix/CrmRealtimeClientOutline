@@ -11,7 +11,7 @@ import scala.collection.JavaConversions._
   */
 object DeleteDataFromHbase {
 
-  val conf = new SparkConf().setAppName("DeleteDataFromHbase")
+  val conf = new SparkConf().setAppName("crmClientOutline_deleteDetails")
 
   def main(args: Array[String]): Unit = {
 
