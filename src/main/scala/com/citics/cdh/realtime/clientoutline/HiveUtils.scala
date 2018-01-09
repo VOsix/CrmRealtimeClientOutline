@@ -37,7 +37,8 @@ object HiveUtils {
       df.registerTempTable("tmp_stkcode")
       hvc.cacheTable("tmp_stkcode")
       hasReadStkcode = true
-      println("read stkcode from hive")
+      //cacheTable 需要action操作触发
+      println(s"read ${df.count()} stkcode records from hive")
     }
   }
 
@@ -51,7 +52,7 @@ object HiveUtils {
       df.registerTempTable("tmp_optcode")
       hvc.cacheTable("tmp_optcode")
       hasReadOptcode = true
-      println("read optcode from hive")
+      println(s"read ${df.count()} optcode records from hive")
     }
   }
 
@@ -64,7 +65,7 @@ object HiveUtils {
       df.registerTempTable("tmp_allbranch")
       hvc.cacheTable("tmp_allbranch")
       hasReadBranch = true
-      println("read allbranch from hive")
+      println(s"read ${df.count()} allbranch records from hive")
     }
   }
 
@@ -77,7 +78,7 @@ object HiveUtils {
       df.registerTempTable("tmp_bankarg")
       hvc.cacheTable("tmp_bankarg")
       hasReadBankarg = true
-      println("read bankarg from hive")
+      println(s"read ${df.count()} bankarg records from hive")
     }
   }
 
@@ -90,7 +91,7 @@ object HiveUtils {
       df.registerTempTable("tmp_businflag")
       hvc.cacheTable("tmp_businflag")
       hasReadBusinflag = true
-      println("read businflag from hive")
+      println(s"read ${df.count()} businflag records from hive")
     }
   }
 
@@ -104,7 +105,7 @@ object HiveUtils {
       df.registerTempTable("tmp_sysdict")
       hvc.cacheTable("tmp_sysdict")
       hasReadSystemDict = true
-      println("read sysdictionary from hive")
+      println(s"read ${df.count()} sysdictionary records from hive")
     }
   }
 
