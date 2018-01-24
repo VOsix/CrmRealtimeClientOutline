@@ -130,7 +130,7 @@ object CrdtrealtimeDetails {
 
                 val position_str = r(0).toString
                 val fund_account = r(1).toString
-                val client_id = r(2).toString
+                val client_id = (math.BigInt(r(2).toString) + math.BigInt("100000000000000000000")).toString()
                 val curr_time = r(3).toString
                 val stkcode = r(4).toString
                 var stkname = r(5).toString

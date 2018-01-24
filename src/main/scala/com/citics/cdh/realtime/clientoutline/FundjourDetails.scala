@@ -128,7 +128,7 @@ object FundjourDetails {
                 val position_str = r(0).toString
                 val branch_no = r(1).toString
                 val fund_account = r(2).toString
-                val client_id = r(3).toString
+                val client_id = (math.BigInt(r(3).toString) + math.BigInt("100000000000000000000")).toString()
                 val curr_time = r(4).toString
                 val moneytype_name = r(5).toString
                 val remark = r(6).toString

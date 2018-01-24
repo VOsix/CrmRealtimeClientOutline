@@ -127,7 +127,7 @@ object CtstentrustDetails {
                 val position_str = r(0).toString
                 val branch_no = r(1).toString
                 val fund_account = r(2).toString
-                val client_id = r(3).toString
+                val client_id = (math.BigInt(r(3).toString) + math.BigInt("100000000000000000000")).toString()
                 val curr_time = r(4).toString
                 val stkcode = r(5).toString
                 var stkname = r(6).toString

@@ -108,7 +108,7 @@ object OtcordersDetails {
                 val staff_list = mapper.readValue(client.get("staff_list"), classOf[util.ArrayList[immutable.Map[String, String]]])
 
                 val position_str = r(0).toString
-                val client_id = r(1).toString
+                val client_id = (math.BigInt(r(1).toString) + math.BigInt("100000000000000000000")).toString()
                 val fund_account = r(2).toString
                 val fund_code = r(3).toString
                 val fund_name = r(4).toString

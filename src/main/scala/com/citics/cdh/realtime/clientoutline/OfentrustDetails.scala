@@ -120,11 +120,11 @@ object OfentrustDetails {
 
                 val position_str = r(0).toString
                 val fund_account = r(1).toString
-                val client_id = r(2).toString
+                val client_id = (math.BigInt(r(2).toString) + math.BigInt("100000000000000000000")).toString()
                 val curr_time = r(3).toString
                 val fund_code = r(4).toString
-                var stock_name = r(5).toString
-                var business_name = r(6).toString
+                val stock_name = r(5).toString
+                val business_name = r(6).toString
                 val price = r(7).toString
                 val deal_share = r(8).toString
                 val balance = r(9).toString
