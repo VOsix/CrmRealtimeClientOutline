@@ -63,7 +63,7 @@ object EntrustDetails {
 
       if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "POSITION_STR", "BRANCH_NO", "FUND_ACCOUNT", "CLIENT_ID",
                                       "CURR_DATE", "CURR_TIME", "STOCK_CODE", "ENTRUST_PRICE", "ENTRUST_AMOUNT", "EXCHANGE_TYPE",
-                                      "OP_ENTRUST_WAY", "ENTRUST_BS", "MONEY_TYPE", "STOCK_TYPE")) {
+                                      "OP_ENTRUST_WAY", "ENTRUST_BS", "MONEY_TYPE", "STOCK_TYPE", "INIT_DATE")) {
 
         entrust_details.registerTempTable("entrust_details")
 
@@ -84,7 +84,7 @@ object EntrustDetails {
                          "COALESCE(ew.DICT_PROMPT,'') as op_entrust_way_name, " +
                          "COALESCE(et.DICT_PROMPT,'') as market_name, " +
                          "e.exchange_type as exchange_type, " +
-                         "e.stock_type " +
+                         "e.stock_type, e.init_date " +
                          "from entrust_details e " +
                          "left outer join tmp_stkcode c " +
                          "on e.exchange_type = c.exchange_type and e.stock_code = c.stock_code " +
@@ -105,7 +105,8 @@ object EntrustDetails {
                          "e.curr_time is not null and " +
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
-                         "e.entrust_amount is not null").repartition(10)
+                         "e.entrust_amount is not null and " +
+                         "e.init_date is not null").repartition(10)
 
         df.foreachPartition(iter => {
 
@@ -150,6 +151,7 @@ object EntrustDetails {
                 val market_name = r(13).toString
                 val exchange_type = r(14).toString
                 val stock_type = r(15).toString
+                val init_date = Utils.initdateCvt(r(16).toString)
 
                 if (stkname.length == 0 || moneytype_name.length == 0) {
                   //通过hbase查询
@@ -167,7 +169,7 @@ object EntrustDetails {
                   val staff_name = i.getOrElse("name", "")
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, client_name, fund_account, stkcode, stock_type)
+                  val arr = Array(staff_id.reverse, init_date, position_str, client_name, fund_account, stkcode, stock_type)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
@@ -206,7 +208,7 @@ object EntrustDetails {
                     }
 
                     //当日聚合统计
-                    if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                    if (init_date == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
                       jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "entrust_count", 1)
 

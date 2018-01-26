@@ -216,4 +216,8 @@ object Utils {
   def otcCrtPositionStr = (timeStamp: String, sno: String) => {
     timeStamp.split("\\D").mkString + sno
   }
+
+  def initdateCvt(initDate: String): String = {
+    Array(initDate.substring(0,4), initDate.substring(4,6), initDate.substring(6,8)).mkString("-")
+  }
 }

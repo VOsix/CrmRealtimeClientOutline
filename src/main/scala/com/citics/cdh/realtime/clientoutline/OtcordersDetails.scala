@@ -54,7 +54,7 @@ object OtcordersDetails {
       val entrust_details = hvc.read.json(rdd)
 
       if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "APP_TIMESTAMP", "APP_SNO", "CUST_CODE", "CUACCT_CODE",
-                                      "INST_CODE", "INST_SNAME", "ORD_AMT", "ORD_QTY", "TRD_ID", "CANCEL_FLAG")) {
+                                      "INST_CODE", "INST_SNAME", "ORD_AMT", "ORD_QTY", "TRD_ID", "CANCEL_FLAG", "TRD_DATE")) {
 
         entrust_details.registerTempTable("entrust_details")
 
@@ -70,7 +70,8 @@ object OtcordersDetails {
                          "e.inst_sname as fund_name, " +
                          "otcAmtConvert(e.ord_amt, e.ord_qty) as amt, " +
                          "otcOrderTypeConvert(e.trd_id) as ord_type, " +
-                         "otcTimestampConvert(e.app_timestamp) as ord_time " +
+                         "otcTimestampConvert(e.app_timestamp) as ord_time, " +
+                         "e.trd_date as trd_date " +
                          "from entrust_details e " +
                          "where e.cancel_flag  = '0' and " +
                          "e.trd_id in ('110','111','112') and " +
@@ -81,7 +82,8 @@ object OtcordersDetails {
                          "e.ord_amt is not null and " +
                          "e.ord_qty is not null and " +
                          "e.trd_id is not null and " +
-                         "e.app_timestamp is not null").repartition(5)
+                         "e.app_timestamp is not null and " +
+                         "e.trd_date is not null").repartition(5)
 
         df.foreachPartition(iter => {
 
@@ -115,6 +117,7 @@ object OtcordersDetails {
                 val amt = r(5).toString
                 val ord_type = r(6).toString
                 val ord_time = r(7).toString
+                val trd_date = Utils.initdateCvt(r(8).toString)
 
                 for (i <- staff_list) {
 
@@ -122,7 +125,7 @@ object OtcordersDetails {
                   val staff_name = i.getOrElse("name", "")
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, ord_time.split(" ")(0), position_str, fund_account)
+                  val arr = Array(staff_id.reverse, trd_date, position_str, fund_account)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
@@ -147,7 +150,7 @@ object OtcordersDetails {
                     table.put(put)
 
                     //当日聚合统计
-                    if (ord_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                    if (trd_date == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
                       jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "otcorder_count", 1)
                     }

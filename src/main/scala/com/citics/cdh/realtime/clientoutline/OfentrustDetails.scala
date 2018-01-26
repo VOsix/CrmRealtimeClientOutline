@@ -62,7 +62,7 @@ object OfentrustDetails {
 
       if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "POSITION_STR", "FUND_ACCOUNT", "CLIENT_ID",
                                       "CURR_DATE", "CURR_TIME", "FUND_CODE", "STOCK_NAME", "ENTRUST_PRICE",
-                                      "DEAL_SHARE", "BALANCE", "ENTRUST_STATUS", "BUSINESS_FLAG")) {
+                                      "DEAL_SHARE", "BALANCE", "ENTRUST_STATUS", "BUSINESS_FLAG", "INIT_DATE")) {
 
         entrust_details.registerTempTable("entrust_details")
 
@@ -75,7 +75,8 @@ object OfentrustDetails {
                          "e.entrust_price as price, " +
                          "e.deal_share, " +
                          "e.balance, " +
-                         "e.entrust_status " +
+                         "e.entrust_status, " +
+                         "e.init_date " +
                          "from entrust_details e " +
                          "left outer join tmp_businflag bf " +
                          "on e.business_flag = bf.business_flag " +
@@ -88,7 +89,8 @@ object OfentrustDetails {
                          "e.stock_name is not null and " +
                          "e.entrust_price is not null and " +
                          "e.deal_share is not null and " +
-                         "e.balance is not null").repartition(5)
+                         "e.balance is not null and " +
+                         "e.init_date is not null").repartition(5)
 //        df.show(10)
 
         df.foreachPartition(iter => {
@@ -129,6 +131,7 @@ object OfentrustDetails {
                 val deal_share = r(8).toString
                 val balance = r(9).toString
                 val entrust_status = r(10).toString
+                val init_date = Utils.initdateCvt(r(11).toString)
 
                 for (i <- staff_list) {
 
@@ -136,7 +139,7 @@ object OfentrustDetails {
                   val staff_name = i.getOrElse("name", "")
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, fund_account, fund_code)
+                  val arr = Array(staff_id.reverse, init_date, position_str, fund_account, fund_code)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
@@ -169,7 +172,7 @@ object OfentrustDetails {
                     tableMapping.put(putMapping)
 
                     //当日聚合统计
-                    if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                    if (init_date == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
                       jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "ofentrust_count", 1)
                     }

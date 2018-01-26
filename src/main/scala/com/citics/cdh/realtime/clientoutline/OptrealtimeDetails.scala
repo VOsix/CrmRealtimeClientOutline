@@ -57,7 +57,7 @@ object OptrealtimeDetails {
 
       if (HiveUtils.schemaFieldsCheck(optrealtime_details.schema, "POSITION_STR", "FUND_ACCOUNT", "CLIENT_ID",
                                       "CURR_DATE", "CURR_TIME", "STOCK_CODE", "OPTION_CODE", "OPT_BUSINESS_PRICE", "BUSINESS_AMOUNT",
-                                      "BUSINESS_BALANCE", "EXCHANGE_TYPE", "ENTRUST_BS", "REAL_TYPE", "REAL_STATUS")) {
+                                      "BUSINESS_BALANCE", "EXCHANGE_TYPE", "ENTRUST_BS", "REAL_TYPE", "REAL_STATUS", "INIT_DATE")) {
 
         optrealtime_details.registerTempTable("realtime_details")
 
@@ -78,7 +78,8 @@ object OptrealtimeDetails {
                          "COALESCE(et.DICT_PROMPT,'') as market_name, " +
                          "COALESCE(rt.DICT_PROMPT,'') as real_name, " +
                          "r.exchange_type as exchange_type, " +
-                         "r.option_code as option_code " +
+                         "r.option_code as option_code, " +
+                         "r.init_date as init_date " +
                          "from realtime_details r " +
                          "left outer join tmp_optcode c " +
                          "on r.exchange_type = c.exchange_type and r.option_code = c.option_code " +
@@ -102,7 +103,8 @@ object OptrealtimeDetails {
                          "r.business_amount is not null and " +
                          "r.business_balance is not null and " +
                          "r.real_status is not null and " +
-                         "r.real_type is not null").repartition(5)
+                         "r.real_type is not null and " +
+                         "r.init_date is not null").repartition(5)
 //        df.show(10)
 
         df.foreachPartition(iter => {
@@ -144,6 +146,7 @@ object OptrealtimeDetails {
                 val real_name = r(12).toString
                 val exchange_type = r(13).toString
                 val option_code = r(14).toString
+                val init_date = Utils.initdateCvt(r(15).toString)
 
                 if (stkname.length == 0 || moneytype_name.length == 0) {
                   //通过hbase查询
@@ -161,7 +164,7 @@ object OptrealtimeDetails {
                   val staff_name = i.getOrElse("name", "")
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, client_name, fund_account, stkcode, real_name)
+                  val arr = Array(staff_id.reverse, init_date, position_str, client_name, fund_account, stkcode, real_name)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
@@ -191,7 +194,7 @@ object OptrealtimeDetails {
                     table.put(put)
 
                     //当日聚合统计
-                    if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                    if (init_date == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
                       jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "optreal_count", 1)
                     }

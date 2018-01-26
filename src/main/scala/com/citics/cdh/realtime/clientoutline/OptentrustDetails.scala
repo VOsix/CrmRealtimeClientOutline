@@ -57,7 +57,7 @@ object OptentrustDetails {
 
       if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "POSITION_STR", "BRANCH_NO", "FUND_ACCOUNT", "CLIENT_ID",
                                       "CURR_DATE", "CURR_TIME", "OPTION_CODE", "STOCK_CODE", "OPT_ENTRUST_PRICE", "ENTRUST_AMOUNT", "EXCHANGE_TYPE",
-                                      "OP_ENTRUST_WAY", "ENTRUST_BS", "MONEY_TYPE")) {
+                                      "OP_ENTRUST_WAY", "ENTRUST_BS", "MONEY_TYPE", "INIT_DATE")) {
 
         entrust_details.registerTempTable("entrust_details")
 
@@ -78,7 +78,8 @@ object OptentrustDetails {
                          "COALESCE(ew.DICT_PROMPT,'') as op_entrust_way_name, " +
                          "COALESCE(et.DICT_PROMPT,'') as market_name, " +
                          "e.exchange_type as exchange_type, " +
-                         "e.option_code as option_code " +
+                         "e.option_code as option_code, " +
+                         "e.init_date as init_date " +
                          "from entrust_details e " +
                          "left outer join tmp_optcode c " +
                          "on e.exchange_type = c.exchange_type and e.option_code = c.option_code " +
@@ -100,7 +101,8 @@ object OptentrustDetails {
                          "e.stock_code is not null and " +
                          "e.option_code is not null and " +
                          "e.opt_entrust_price is not null and " +
-                         "e.entrust_amount is not null").repartition(5)
+                         "e.entrust_amount is not null and " +
+                         "e.init_date is not null").repartition(5)
 
         df.foreachPartition(iter => {
 
@@ -142,6 +144,7 @@ object OptentrustDetails {
                 val market_name = r(13).toString
                 val exchange_type = r(14).toString
                 val option_code = r(15).toString
+                val init_date = Utils.initdateCvt(r(16).toString)
 
                 if (stkname.length == 0 || moneytype_name.length == 0) {
                   //通过hbase查询
@@ -159,7 +162,7 @@ object OptentrustDetails {
                   val staff_name = i.getOrElse("name", "")
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, client_name, fund_account, stkcode)
+                  val arr = Array(staff_id.reverse, init_date, position_str, client_name, fund_account, stkcode)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
@@ -190,7 +193,7 @@ object OptentrustDetails {
                     table.put(put)
 
                     //当日聚合统计
-                    if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                    if (init_date == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
                       jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "optentrust_count", 1)
                     }

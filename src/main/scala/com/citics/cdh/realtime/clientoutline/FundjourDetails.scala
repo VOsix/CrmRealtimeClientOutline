@@ -59,7 +59,7 @@ object FundjourDetails {
 
       if (HiveUtils.schemaFieldsCheck(fundjour_details.schema, "POSITION_STR", "BRANCH_NO", "FUND_ACCOUNT", "CLIENT_ID",
                                       "CURR_DATE", "CURR_TIME", "POST_BALANCE", "OCCUR_BALANCE", "BANK_NO", "BUSINESS_FLAG",
-                                      "BRANCH_NO", "OP_ENTRUST_WAY", "MONEY_TYPE")) {
+                                      "BRANCH_NO", "OP_ENTRUST_WAY", "MONEY_TYPE", "INIT_DATE")) {
 
         fundjour_details.registerTempTable("fundjour_details")
 
@@ -77,7 +77,8 @@ object FundjourDetails {
                          "f.bank_no as bank_no, " +
                          "COALESCE(bk.bank_name,'') as bank_name, " +
                          "f.business_flag as business_flag, " +
-                         "COALESCE(br.branch_name,'') as branch_name " +
+                         "COALESCE(br.branch_name,'') as branch_name, " +
+                         "f.init_date " +
                          "from fundjour_details f " +
                          "left outer join tmp_allbranch br " +
                          "on f.branch_no = br.branch_no " +
@@ -99,7 +100,8 @@ object FundjourDetails {
                          "f.post_balance is not null and " +
                          "f.occur_balance is not null and " +
                          "f.bank_no is not null and " +
-                         "f.business_flag is not null").repartition(10)
+                         "f.business_flag is not null and " +
+                         "f.init_date is not null").repartition(10)
 
         df.foreachPartition(iter => {
 
@@ -139,6 +141,7 @@ object FundjourDetails {
                 val bank_name = r(11).toString
                 val business_flag = r(12).toString
                 val branch_name = r(13).toString
+                val init_date = Utils.initdateCvt(r(14).toString)
 
                 for (i <- staff_list) {
 
@@ -146,7 +149,7 @@ object FundjourDetails {
                   val staff_name = i.getOrElse("name", "")
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, fund_account)
+                  val arr = Array(staff_id.reverse, init_date, position_str, fund_account)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
@@ -177,7 +180,7 @@ object FundjourDetails {
                     table.put(put)
 
                     //当日聚合统计
-                    if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                    if (init_date == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
                       jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "fundjour_count", 1)
 

@@ -57,7 +57,8 @@ object StockjourDetails {
       val stockjour_details = hvc.read.json(rdd)
 
       if (HiveUtils.schemaFieldsCheck(stockjour_details.schema, "POSITION_STR", "BRANCH_NO", "FUND_ACCOUNT", "CLIENT_ID",
-                                      "CURR_DATE", "CURR_TIME", "OCCUR_AMOUNT", "BUSINESS_FLAG", "MONEY_TYPE", "STOCK_TYPE")) {
+                                      "CURR_DATE", "CURR_TIME", "OCCUR_AMOUNT", "BUSINESS_FLAG", "MONEY_TYPE", "STOCK_TYPE",
+                                      "INIT_DATE")) {
 
         stockjour_details.registerTempTable("stockjour_details")
 
@@ -71,7 +72,8 @@ object StockjourDetails {
                          "s.exchange_type, " +
                          "s.stock_code, " +
                          "s.occur_amount as occur_amount, " +
-                         "bf.business_name as remark " +
+                         "bf.business_name as remark, " +
+                         "s.init_date as init_date " +
                          "from stockjour_details s " +
                          "join tmp_allbranch br " +
                          "on s.branch_no = br.branch_no " +
@@ -88,7 +90,8 @@ object StockjourDetails {
                          "s.curr_time is not null and " +
                          "s.branch_no is not null and " +
                          "s.occur_amount is not null and " +
-                         "s.money_type is not null").repartition(5)
+                         "s.money_type is not null and " +
+                         "s.init_date is not null").repartition(5)
 //        df.show(10)
 
         df.foreachPartition(iter => {
@@ -129,6 +132,7 @@ object StockjourDetails {
                 val stock_code = r(8).toString
                 val occur_amount = r(9).toString
                 val remark = r(10).toString
+                val init_date = Utils.initdateCvt(r(11).toString)
 
                 val keyPrice = s"${exchange_type}|${stock_code}"
                 val get = new Get(Bytes.toBytes(keyPrice))
@@ -142,7 +146,7 @@ object StockjourDetails {
                   val staff_name = i.getOrElse("name", "")
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str)
+                  val arr = Array(staff_id.reverse, init_date, position_str)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
@@ -172,7 +176,7 @@ object StockjourDetails {
                     tableDetails.put(put)
 
                     //当日聚合统计
-                    if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                    if (init_date == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
                       jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "stockjour_count", 1)
 

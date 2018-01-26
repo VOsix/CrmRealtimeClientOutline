@@ -57,7 +57,7 @@ object CtstentrustDetails {
 
       if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "POSITION_STR", "BRANCH_NO", "FUND_ACCOUNT", "CLIENT_ID",
                                       "CURR_DATE", "CURR_TIME", "STOCK_CODE", "ENTRUST_PRICE", "ENTRUST_AMOUNT", "EXCHANGE_TYPE",
-                                      "OP_ENTRUST_WAY", "ENTRUST_BS")) {
+                                      "OP_ENTRUST_WAY", "ENTRUST_BS", "INIT_DATE")) {
 
         entrust_details.registerTempTable("entrust_details")
 
@@ -77,7 +77,8 @@ object CtstentrustDetails {
                          "round(100*e.entrust_amount,2) as entrust_balance, " +
                          "COALESCE(ew.DICT_PROMPT,'') as op_entrust_way_name, " +
                          "COALESCE(et.DICT_PROMPT,'') as market_name, " +
-                         "e.exchange_type as exchange_type " +
+                         "e.exchange_type as exchange_type, " +
+                         "e.init_date as init_date " +
                          "from entrust_details e " +
                          "left outer join tmp_stkcode c " +
                          "on e.exchange_type = c.exchange_type and e.stock_code = c.stock_code " +
@@ -98,7 +99,8 @@ object CtstentrustDetails {
                          "e.curr_time is not null and " +
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
-                         "e.entrust_amount is not null").repartition(5)
+                         "e.entrust_amount is not null and " +
+                         "e.init_date is not null").repartition(5)
 
         df.foreachPartition(iter => {
 
@@ -139,6 +141,7 @@ object CtstentrustDetails {
                 val op_entrust_way_name = r(12).toString
                 val market_name = r(13).toString
                 val exchange_type = r(14).toString
+                val init_date = Utils.initdateCvt(r(15).toString)
 
                 if (stkname.length == 0 || moneytype_name.length == 0) {
                   //通过hbase查询
@@ -156,8 +159,7 @@ object CtstentrustDetails {
                   val staff_name = i.getOrElse("name", "")
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, Array(position_str.substring(0, 4),position_str.substring(4,6),position_str.substring(6,8)).mkString("-"),
-                                  position_str, client_name, fund_account)
+                  val arr = Array(staff_id.reverse, init_date, position_str, client_name, fund_account)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
@@ -188,7 +190,7 @@ object CtstentrustDetails {
                     table.put(put)
 
                     //当日聚合统计
-                    if (position_str.substring(0, 8) == Utils.getSpecDay(0, "yyyyMMdd")) {
+                    if (init_date == Utils.getSpecDay(0, "yyyy-MM-dd")) {
                       //记录条数汇总
                       jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "ctstentrust_count", 1)
                     }
