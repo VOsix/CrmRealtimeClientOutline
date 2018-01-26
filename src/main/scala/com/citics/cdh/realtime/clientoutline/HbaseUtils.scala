@@ -72,7 +72,7 @@ object HbaseUtils {
     rst
   }
 
-  def getStkcodeFromHbase(conn: Connection, exchange_type: String, stock_code: String): (String, String) = {
+  def getStkcodeFromHbase(conn: Connection, exchange_type: String, stock_code: String): (String, String, String) = {
 
     val tableName = TableName.valueOf(Utils.hbaseTStkcode)
     val table = conn.getTable(tableName)
@@ -81,6 +81,7 @@ object HbaseUtils {
     val get = new Get(Bytes.toBytes(rowkey))
     get.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("STOCK_NAME"))
     get.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("MONEY_TYPE"))
+    get.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("STOCK_TYPE"))
 
     try {
       val rs = table.get(get).rawCells().map(c => (Bytes.toString(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength),
@@ -90,8 +91,8 @@ object HbaseUtils {
         case "1" => "美元"
         case "2" => "港币"
         case _ => ""
-      })
-      logger.warn(s"stkcode read from hbase $exchange_type|$stock_code|${result._1}|${result._2}")
+      }, rs.getOrElse("STOCK_TYPE", ""))
+      logger.warn(s"stkcode read from hbase $exchange_type|$stock_code|${result._1}|${result._2}|${result._3}")
       result
     } catch {
       case ex: Exception => {

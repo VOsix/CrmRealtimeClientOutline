@@ -77,10 +77,11 @@ object CrdtrealtimeDetails {
                          "r.business_balance as balance, " +
                          "COALESCE(et.DICT_PROMPT,'') as market_name, " +
                          "COALESCE(rt.DICT_PROMPT,'') as real_name, " +
-                         "r.exchange_type as exchange_type " +
+                         "r.exchange_type as exchange_type, " +
+                         "COALESCE(c.stock_type,'') as stock_type " +
                          "from realtime_details r " +
                          "left outer join tmp_stkcode c " +
-                         "on r.exchange_type = c.exchange_type and r.stock_code = c.stock_code and c.stock_type != '4' " +
+                         "on r.exchange_type = c.exchange_type and r.stock_code = c.stock_code " +
                          "left outer join tmp_entrustbs as eb " +
                          "on r.entrust_bs = eb.subentry " +
                          "left outer join tmp_realtype as rt " +
@@ -142,8 +143,9 @@ object CrdtrealtimeDetails {
                 val market_name = r(11).toString
                 val real_name = r(12).toString
                 val exchange_type = r(13).toString
+                var stock_type = r(14).toString
 
-                if (stkname.length == 0 || moneytype_name.length == 0) {
+                if (stkname.length == 0 || moneytype_name.length == 0 || stock_type.length == 0) {
                   //通过hbase查询
                   val stockInfo = HbaseUtils.getStkcodeFromHbase(hbaseConnect, exchange_type, stkcode)
 
@@ -151,59 +153,64 @@ object CrdtrealtimeDetails {
                     stkname = stockInfo._1
                   if (moneytype_name.length == 0)
                     moneytype_name = stockInfo._2
+                  if (stock_type.length == 0)
+                    stock_type = stockInfo._3
                 }
 
-                for (i <- staff_list) {
+                if (stock_type != "4") {
+                  //非普通申购
+                  for (i <- staff_list) {
+                    val staff_id = i.getOrElse("id", "")
+                    val staff_name = i.getOrElse("name", "")
 
-                  val staff_id = i.getOrElse("id", "")
-                  val staff_name = i.getOrElse("name", "")
+                    //staff_id 逆序 同一员工下按position_str排序
+                    val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, client_name, fund_account, stkcode, real_name)
+                    val rowkey = arr.mkString(",")
+                    val putTry = new Put(Bytes.toBytes(rowkey))
+                    putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
 
-                  //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, curr_time.split(" ")(0), position_str, client_name, fund_account, stkcode, real_name)
-                  val rowkey = arr.mkString(",")
-                  val putTry = new Put(Bytes.toBytes(rowkey))
-                  putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
+                    if (table.checkAndPut(Bytes.toBytes(rowkey), Bytes.toBytes("cf"), Bytes.toBytes("exist"), null, putTry)) {
+                      //检验hbase无此明细 确保重提唯一性
+                      //hbase 记录明细
+                      val put = new Put(Bytes.toBytes(rowkey))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("position_str"), Bytes.toBytes(position_str))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("fund_account"), Bytes.toBytes(fund_account))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_id"), Bytes.toBytes(client_id))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("curr_time"), Bytes.toBytes(curr_time))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("stkcode"), Bytes.toBytes(stkcode))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("stkname"), Bytes.toBytes(stkname))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("moneytype_name"), Bytes.toBytes(moneytype_name))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("remark"), Bytes.toBytes(remark))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("price"), Bytes.toBytes(price))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("amount"), Bytes.toBytes(amount))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("balance"), Bytes.toBytes(balance))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("market_name"), Bytes.toBytes(market_name))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("real_name"), Bytes.toBytes(real_name))
 
-                  if (table.checkAndPut(Bytes.toBytes(rowkey), Bytes.toBytes("cf"), Bytes.toBytes("exist"), null, putTry)) {
-                    //检验hbase无此明细 确保重提唯一性
-                    //hbase 记录明细
-                    val put = new Put(Bytes.toBytes(rowkey))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("position_str"), Bytes.toBytes(position_str))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("fund_account"), Bytes.toBytes(fund_account))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_id"), Bytes.toBytes(client_id))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("curr_time"), Bytes.toBytes(curr_time))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("stkcode"), Bytes.toBytes(stkcode))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("stkname"), Bytes.toBytes(stkname))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("moneytype_name"), Bytes.toBytes(moneytype_name))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("remark"), Bytes.toBytes(remark))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("price"), Bytes.toBytes(price))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("amount"), Bytes.toBytes(amount))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("balance"), Bytes.toBytes(balance))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("market_name"), Bytes.toBytes(market_name))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("real_name"), Bytes.toBytes(real_name))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_name"), Bytes.toBytes(staff_name))
 
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_name"), Bytes.toBytes(staff_name))
+                      table.put(put)
 
-                    table.put(put)
+                      //当日聚合统计
+                      if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                        //记录条数汇总
+                        jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "crdtrealtime_count", 1)
 
-                    //当日聚合统计
-                    if (curr_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
-                      //记录条数汇总
-                      jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "crdtrealtime_count", 1)
+                        //实时汇总部分
+                        val realtimeKey = String.format(Utils.redisAggregateRealtimeKey, staff_id)
 
-                      //实时汇总部分
-                      val realtimeKey = String.format(Utils.redisAggregateRealtimeKey, staff_id)
-
-                      if (!jedisCluster.hexists(realtimeKey, "deal_count")) {
-                        jedisCluster.hincrBy(realtimeKey, "deal_count", 0)
-                        jedisCluster.expireAt(realtimeKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
+                        if (!jedisCluster.hexists(realtimeKey, "deal_count")) {
+                          jedisCluster.hincrBy(realtimeKey, "deal_count", 0)
+                          jedisCluster.expireAt(realtimeKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
+                        }
+                        jedisCluster.hincrBy(realtimeKey, "deal_count", 1)
+                        jedisCluster.hincrByFloat(realtimeKey, "deal_balance", balance.toDouble)
                       }
-                      jedisCluster.hincrBy(realtimeKey, "deal_count", 1)
-                      jedisCluster.hincrByFloat(realtimeKey, "deal_balance", balance.toDouble)
                     }
                   }
+
                 }
               }
             }
