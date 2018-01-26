@@ -1,6 +1,8 @@
 package com.citics.cdh.offline.clientoutline
 
 
+import java.util.{Calendar, Date}
+
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.client._
@@ -18,20 +20,29 @@ object DeleteDataFromHbase {
     val sc = new SparkContext()
     sc.setLogLevel("WARN")
 
-    deleteHbaseData(Utils.hbaseTRealtimeDetails)
-    deleteHbaseData(Utils.hbaseTEntrustDetails)
-    deleteHbaseData(Utils.hbaseTFoudjourDetails)
-    deleteHbaseData(Utils.hbaseTCrdtrealtiemDetails)
-    deleteHbaseData(Utils.hbaseTCrdtentrustDetails)
-    deleteHbaseData(Utils.hbaseTOptrealtimeDetails)
-    deleteHbaseData(Utils.hbaseTOptentrustDetails)
-    deleteHbaseData(Utils.hbaseTCtstentrustDetails)
-    deleteHbaseData(Utils.hbaseTOfentrustDetails)
-    deleteHbaseData(Utils.hbaseTOtcbookorderDetails)
-    deleteHbaseData(Utils.hbaseTOtcorderDetails)
-    deleteHbaseData(Utils.hbaseTStockjourDetails)
-    deleteHbaseData(Utils.hbaseTEntrustMapping)
-    deleteHbaseData(Utils.hbaseTOfentrustMapping)
+    val cal = Calendar.getInstance()
+    cal.setTime(new Date())
+    val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1
+
+    println(s"today is ${dayOfWeek}th day of week")
+
+    if (dayOfWeek == 1) {
+      //每周一清空历史明细
+      deleteHbaseData(Utils.hbaseTRealtimeDetails)
+      deleteHbaseData(Utils.hbaseTEntrustDetails)
+      deleteHbaseData(Utils.hbaseTFoudjourDetails)
+      deleteHbaseData(Utils.hbaseTCrdtrealtiemDetails)
+      deleteHbaseData(Utils.hbaseTCrdtentrustDetails)
+      deleteHbaseData(Utils.hbaseTOptrealtimeDetails)
+      deleteHbaseData(Utils.hbaseTOptentrustDetails)
+      deleteHbaseData(Utils.hbaseTCtstentrustDetails)
+      deleteHbaseData(Utils.hbaseTOfentrustDetails)
+      deleteHbaseData(Utils.hbaseTOtcbookorderDetails)
+      deleteHbaseData(Utils.hbaseTOtcorderDetails)
+      deleteHbaseData(Utils.hbaseTStockjourDetails)
+      deleteHbaseData(Utils.hbaseTEntrustMapping)
+      deleteHbaseData(Utils.hbaseTOfentrustMapping)
+    }
   }
 
   def deleteHbaseData(tn: String): Unit = {
