@@ -79,7 +79,7 @@ object CrdtrealtimeDetails {
                          "COALESCE(rt.DICT_PROMPT,'') as real_name, " +
                          "r.exchange_type as exchange_type " +
                          "from realtime_details r " +
-                         "join tmp_stkcode c " +
+                         "left outer join tmp_stkcode c " +
                          "on r.exchange_type = c.exchange_type and r.stock_code = c.stock_code and c.stock_type != '4' " +
                          "left outer join tmp_entrustbs as eb " +
                          "on r.entrust_bs = eb.subentry " +
