@@ -27,8 +27,9 @@ object DeleteDataFromHbase {
     deleteHbaseData(Utils.hbaseTOptentrustDetails)
     deleteHbaseData(Utils.hbaseTCtstentrustDetails)
     deleteHbaseData(Utils.hbaseTOfentrustDetails)
-    deleteHbaseData(Utils.hbaseTOtcbookorderDetails)
-    deleteHbaseData(Utils.hbaseTOtcorderDetails)
+    //otc 跨日较多 暂时不进行清理
+//    deleteHbaseData(Utils.hbaseTOtcbookorderDetails)
+//    deleteHbaseData(Utils.hbaseTOtcorderDetails)
     deleteHbaseData(Utils.hbaseTStockjourDetails)
     deleteHbaseData(Utils.hbaseTEntrustMapping)
     deleteHbaseData(Utils.hbaseTOfentrustMapping)
