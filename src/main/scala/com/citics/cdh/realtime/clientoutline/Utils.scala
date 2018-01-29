@@ -49,6 +49,7 @@ object Utils {
   val hbaseTFoudjourDetails  = "realtime:client_outline_fundjour_details"
   val hbaseTCrdtrealtiemDetails = "realtime:client_outline_crdtrealtime_details"
   val hbaseTCrdtentrustDetails = "realtime:client_outline_crdtentrust_details"
+  val hbaseTCrdtentrustMapping = "realtime:client_outline_crdtentrust_mapping"
   val hbaseTOptrealtimeDetails = "realtime:client_outline_optrealtime_details"
   val hbaseTOptentrustDetails = "realtime:client_outline_optentrust_details"
 

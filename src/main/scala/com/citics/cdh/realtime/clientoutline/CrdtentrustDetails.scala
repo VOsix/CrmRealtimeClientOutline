@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import kafka.serializer.StringDecoder
 import org.apache.hadoop.hbase.TableName
-import org.apache.hadoop.hbase.client.{Connection, Put, Table}
+import org.apache.hadoop.hbase.client.{Connection, Get, Put, Table}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.streaming.{Seconds, StreamingContext}
@@ -45,6 +45,12 @@ object CrdtentrustDetails {
     val insertRecords = lines.filter(str => str.contains(Utils.insertOpt)).map(i => {
       Utils.insertRecordsConvert(i) match {
         case Some(s) => s
+      }
+    })
+
+    val updateRecords = lines.filter(str => str.contains(Utils.updateOpt)).map(u => {
+      Utils.updateRecordsConvert(u) match {
+        case Some(m) => m
       }
     })
 
@@ -100,19 +106,23 @@ object CrdtentrustDetails {
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
                          "e.entrust_amount is not null and " +
-                         "e.init_date is not null").repartition(5)
+                         "e.init_date is not null").repartition(10)
 
         df.foreachPartition(iter => {
 
           var jedisCluster: JedisCluster = null
           var hbaseConnect: Connection = null
-          var table: Table = null
+
+          var tableDetails: Table = null
+          var tableMapping: Table = null
 
           try {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
             hbaseConnect = HbaseUtils.getConnect()
-            val tableName = TableName.valueOf(Utils.hbaseTCrdtentrustDetails)
-            table = hbaseConnect.getTable(tableName)
+            var tableName = TableName.valueOf(Utils.hbaseTCrdtentrustDetails)
+            tableDetails = hbaseConnect.getTable(tableName)
+            tableName = TableName.valueOf(Utils.hbaseTCrdtentrustMapping)
+            tableMapping = hbaseConnect.getTable(tableName)
 
             for (r <- iter) {
               val key = String.format(Utils.redisClientRelKey, r(3).toString)
@@ -165,7 +175,7 @@ object CrdtentrustDetails {
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
 
-                  if (table.checkAndPut(Bytes.toBytes(rowkey), Bytes.toBytes("cf"), Bytes.toBytes("exist"), null, putTry)) {
+                  if (tableDetails.checkAndPut(Bytes.toBytes(rowkey), Bytes.toBytes("cf"), Bytes.toBytes("exist"), null, putTry)) {
                     //检验hbase无此明细 确保重提唯一性
                     //hbase 记录明细
                     val put = new Put(Bytes.toBytes(rowkey))
@@ -189,7 +199,11 @@ object CrdtentrustDetails {
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_name"), Bytes.toBytes(staff_name))
 
-                    table.put(put)
+                    tableDetails.put(put)
+
+                    val putMapping = new Put(Bytes.toBytes(position_str.reverse))
+                    putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes(rowkey), Bytes.toBytes("1"))
+                    tableMapping.put(putMapping)
 
                     //当日聚合统计
                     if (init_date == Utils.getSpecDay(0, "yyyy-MM-dd")) {
@@ -218,14 +232,105 @@ object CrdtentrustDetails {
           } finally {
             if (jedisCluster != null)
               jedisCluster.close()
-            if (table != null)
-              table.close()
+            if (tableDetails != null)
+              tableDetails.close()
+            if (tableMapping != null)
+              tableMapping.close()
             if (hbaseConnect != null)
               hbaseConnect.close()
           }
         })
       }
     })
+
+    updateRecords.foreachRDD(rdd => {
+
+      //过滤出 更新BUSINESS_BALANCE的记录
+      val rdd1 = rdd.filter(m => (m.contains("BUSINESS_BALANCE") &&
+                            (m("BUSINESS_BALANCE")._1 != m("BUSINESS_BALANCE")._2)))
+      //相同postion_str 到一个分区 对应操作按pos排序
+      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(10).map(x => {
+        val list = x._2.toList.sortWith((m1, m2) => {
+          m1("pos")._1 < m2("pos")._1
+        })
+        (x._1, list(list.length-1)("BUSINESS_BALANCE")._2)
+      })
+
+      rdd2.foreachPartition(iter => {
+
+        var hbaseConnect: Connection = null
+        var tableMapping: Table = null
+        var tableDetails: Table = null
+        var jedisCluster: JedisCluster = null
+
+        try {
+          hbaseConnect = HbaseUtils.getConnect()
+          var tableName = TableName.valueOf(Utils.hbaseTCrdtentrustMapping)
+          tableMapping = hbaseConnect.getTable(tableName)
+          tableName = TableName.valueOf(Utils.hbaseTCrdtentrustDetails)
+          tableDetails = hbaseConnect.getTable(tableName)
+          jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
+
+          for ((s, bal) <- iter) {
+
+            val rowkey = s.reverse
+            val get = new Get(Bytes.toBytes(rowkey))
+            val rst = tableMapping.get(get)
+
+            if (!rst.isEmpty) {
+              //对应关系
+              val columns = rst.rawCells().map(c => Bytes.toString(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength))
+              columns.map(t => {
+                //员工明细表
+                val key = t
+                val get = new Get(Bytes.toBytes(key))
+                get.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("entrust_balance"))
+                val result = tableDetails.get(get)
+                if (!result.isEmpty) {
+                  //读取更新前entrust_balance
+                  val preBal = Bytes.toString(result.getValue(Bytes.toBytes("cf"), Bytes.toBytes("entrust_balance"))).toDouble
+                  println(s"${key}: ${preBal}->${bal}")
+
+                  val put = new Put(Bytes.toBytes(key))
+                  //明细更新为最新值
+                  put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("entrust_balance"), Bytes.toBytes(bal))
+                  put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("last_update"), Bytes.toBytes(Utils.getSpecDay(0, "yyyy-MM-dd HH:mm:ss")))
+                  tableDetails.put(put)
+
+                  //redis金额统计更新
+                  if (key.split(",")(1) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                    //实时汇总部分
+                    val delta = bal.toDouble - preBal
+                    val staff_id = key.split(",")(0).reverse
+                    val entrustKey = String.format(Utils.redisAggregateEntrustKey, staff_id)
+
+                    if (!jedisCluster.hexists(entrustKey, "entrust_count")) {
+                      jedisCluster.hincrBy(entrustKey, "entrust_count", 0)
+                      jedisCluster.expireAt(entrustKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
+                    }
+                    jedisCluster.hincrByFloat(entrustKey, "entrust_balance", delta)
+                  }
+                }
+              })
+            }
+          }
+        } catch {
+          case ex: Exception => {
+            ex.printStackTrace()
+          }
+        } finally {
+          if (tableMapping != null)
+            tableMapping.close()
+          if (tableDetails != null)
+            tableDetails.close()
+          if (hbaseConnect != null)
+            hbaseConnect.close()
+          if (jedisCluster != null)
+            jedisCluster.close()
+        }
+      })
+    })
+
 
     ssc.start()
     ssc.awaitTermination()
