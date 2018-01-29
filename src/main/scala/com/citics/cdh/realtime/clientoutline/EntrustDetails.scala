@@ -106,7 +106,7 @@ object EntrustDetails {
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
                          "e.entrust_amount is not null and " +
-                         "e.init_date is not null").repartition(10)
+                         "e.init_date is not null").repartition(20)
 
         df.foreachPartition(iter => {
 
@@ -200,12 +200,12 @@ object EntrustDetails {
 
                     tableDetails.put(put)
 
-                    if (stock_type == "Z") {
+//                    if (stock_type == "Z") {
                       //国债回购 记录postion_str与rowkey映射关系
                       val putMapping = new Put(Bytes.toBytes(position_str.reverse))
                       putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes(rowkey), Bytes.toBytes("1"))
                       tableMapping.put(putMapping)
-                    }
+//                    }
 
                     //当日聚合统计
                     if (init_date == Utils.getSpecDay(0, "yyyy-MM-dd")) {
@@ -251,7 +251,7 @@ object EntrustDetails {
       val rdd1 = rdd.filter(m => (m.contains("BUSINESS_BALANCE") &&
                                   (m("BUSINESS_BALANCE")._1 != m("BUSINESS_BALANCE")._2)))
       //相同postion_str 到一个分区 对应操作按pos排序
-      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(10).map(x => {
+      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(20).map(x => {
         val list = x._2.toList.sortWith((m1, m2) => {
           m1("pos")._1 < m2("pos")._1
         })
