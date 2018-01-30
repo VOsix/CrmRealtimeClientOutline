@@ -2,7 +2,7 @@ package com.citics.cdh.realtime.clientoutline
 
 import java.text.SimpleDateFormat
 import java.util
-import java.util.Calendar
+import java.util.{Calendar, Date}
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -39,7 +39,7 @@ object Utils {
   //hbase
   val hbaseHosts = "10.23.147.32,10.23.147.33,10.23.147.39"
   val hbasePort = "2181"
-  val hbaseTKafkaOffset     = "realtime:kafka_offset"
+  val hbaseTKafkaOffset = "realtime:kafka_offset"
   val hbaseTStkcode = "EDM_REALTIME:STKCODE"
   val hbaseTOptcode = "EDM_REALTIME:OPTCODE"
   val hbaseTPrice   = "EDM_REALTIME:PRICE"
@@ -89,7 +89,7 @@ object Utils {
   val redisStaffInfoKey = "realtime:crm:staff_info:staff_id:%s"
   val redisAggregateRealtimeKey = "realtime:crm:aggregate:realtime:staff_id:%s"
   val redisAggregateTopdealKey  = "realtime:crm:aggregate:realtime:top:staff_id:%s"
-  val redisAggregateEntrustKey  = "realtime:crm:aggregate:entrust:staff_id:%s"
+  val redisAggregateEntrustKey  = "realtime:crm:aggregate:entrust:init_date:%s:staff_id:%s"
   val redisAggregateFundjourKey = "realtime:crm:aggregate:fundjour:staff_id:%s"
   val redisAggregateFundOutKey  = "realtime:crm:aggregate:fundjour:out:staff_id:%s"
   val redisAggregateStockjourKey = "realtime:crm:aggregate:stockjour:out:staff_id:%s"
@@ -220,5 +220,17 @@ object Utils {
 
   def initdateCvt(initDate: String): String = {
     Array(initDate.substring(0,4), initDate.substring(4,6), initDate.substring(6,8)).mkString("-")
+  }
+
+  def dateStringAddDays(date: String, num: Int): String = {
+    val myformat = new SimpleDateFormat("yyyy-MM-dd")
+    var dnow = new Date()
+    if(date != ""){
+      dnow = myformat.parse(date)}
+    val cal = Calendar.getInstance()
+    cal.setTime(dnow)
+    cal.add(Calendar.DAY_OF_MONTH, num)
+    val newday= cal.getTime()
+    myformat.format(newday)
   }
 }

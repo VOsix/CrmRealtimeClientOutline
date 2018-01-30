@@ -200,28 +200,22 @@ object EntrustDetails {
 
                     tableDetails.put(put)
 
-//                    if (stock_type == "Z") {
-                      //国债回购 记录postion_str与rowkey映射关系
-                      val putMapping = new Put(Bytes.toBytes(position_str.reverse))
-                      putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes(rowkey), Bytes.toBytes("1"))
-                      tableMapping.put(putMapping)
-//                    }
+                    val putMapping = new Put(Bytes.toBytes(position_str.reverse))
+                    putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes(rowkey), Bytes.toBytes("1"))
+                    tableMapping.put(putMapping)
 
-                    //当日聚合统计
-                    if (init_date == Utils.getSpecDay(0, "yyyy-MM-dd")) {
-                      //记录条数汇总
-                      jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "entrust_count", 1)
+                    //记录条数汇总
+                    jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "entrust_count", 1)
 
-                      //实时汇总部分
-                      val entrustKey = String.format(Utils.redisAggregateEntrustKey, staff_id)
+                    //实时汇总部分
+                    val entrustKey = String.format(Utils.redisAggregateEntrustKey, init_date, staff_id)
 
-                      if (!jedisCluster.hexists(entrustKey, "entrust_count")) {
-                        jedisCluster.hincrBy(entrustKey, "entrust_count", 0)
-                        jedisCluster.expireAt(entrustKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
-                      }
-                      jedisCluster.hincrBy(entrustKey, "entrust_count", 1)
-                      jedisCluster.hincrByFloat(entrustKey, "entrust_balance", entrust_balance.toDouble)
+                    if (!jedisCluster.hexists(entrustKey, "entrust_count")) {
+                      jedisCluster.hincrBy(entrustKey, "entrust_count", 0)
+                      jedisCluster.expireAt(entrustKey, Utils.getUnixStamp(Utils.dateStringAddDays(init_date, 1), "yyyy-MM-dd"))
                     }
+                    jedisCluster.hincrBy(entrustKey, "entrust_count", 1)
+                    jedisCluster.hincrByFloat(entrustKey, "entrust_balance", entrust_balance.toDouble)
                   }
                 }
               }
@@ -300,18 +294,17 @@ object EntrustDetails {
                   tableDetails.put(put)
 
                   //redis金额统计更新
-                  if (key.split(",")(1) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
-                    //实时汇总部分
-                    val delta = bal.toDouble - preBal
-                    val staff_id = key.split(",")(0).reverse
-                    val entrustKey = String.format(Utils.redisAggregateEntrustKey, staff_id)
+                  //实时汇总部分
+                  val init_date = key.split(",")(1)
+                  val delta = bal.toDouble - preBal
+                  val staff_id = key.split(",")(0).reverse
+                  val entrustKey = String.format(Utils.redisAggregateEntrustKey, init_date, staff_id)
 
-                    if (!jedisCluster.hexists(entrustKey, "entrust_count")) {
-                      jedisCluster.hincrBy(entrustKey, "entrust_count", 0)
-                      jedisCluster.expireAt(entrustKey, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
-                    }
-                    jedisCluster.hincrByFloat(entrustKey, "entrust_balance", delta)
+                  if (!jedisCluster.hexists(entrustKey, "entrust_count")) {
+                    jedisCluster.hincrBy(entrustKey, "entrust_count", 0)
+                    jedisCluster.expireAt(entrustKey, Utils.getUnixStamp(Utils.dateStringAddDays(init_date, 1), "yyyy-MM-dd"))
                   }
+                  jedisCluster.hincrByFloat(entrustKey, "entrust_balance", delta)
                 }
               })
             }
