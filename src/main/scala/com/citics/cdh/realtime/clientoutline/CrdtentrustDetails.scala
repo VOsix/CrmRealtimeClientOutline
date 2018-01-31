@@ -203,6 +203,7 @@ object CrdtentrustDetails {
 
                     val putMapping = new Put(Bytes.toBytes(position_str.reverse))
                     putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes(rowkey), Bytes.toBytes("1"))
+                    putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("init_date"), Bytes.toBytes(init_date))
                     tableMapping.put(putMapping)
 
                     //记录条数汇总
@@ -276,7 +277,9 @@ object CrdtentrustDetails {
 
             if (!rst.isEmpty) {
               //对应关系
-              val columns = rst.rawCells().map(c => Bytes.toString(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength))
+              val columns = rst.rawCells().map(c => Bytes.toString(c.getQualifierArray,
+                                                                   c.getQualifierOffset,
+                                                                   c.getQualifierLength)).filter(s => {s != "init_date"})
               columns.map(t => {
                 //员工明细表
                 val key = t
@@ -308,6 +311,8 @@ object CrdtentrustDetails {
                   jedisCluster.hincrByFloat(entrustKey, "entrust_balance", delta)
                 }
               })
+            } else {
+              logger.warn(s"position: ${rowkey} not found in mapping")
             }
           }
         } catch {

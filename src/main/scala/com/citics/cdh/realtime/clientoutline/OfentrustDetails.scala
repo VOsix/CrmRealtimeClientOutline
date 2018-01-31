@@ -169,6 +169,7 @@ object OfentrustDetails {
                     //记录postion_str与rowkey映射关系
                     val putMapping = new Put(Bytes.toBytes(position_str.reverse))
                     putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes(rowkey), Bytes.toBytes("1"))
+                    putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("init_date"), Bytes.toBytes(init_date))
                     tableMapping.put(putMapping)
 
                     //当日聚合统计
@@ -231,8 +232,9 @@ object OfentrustDetails {
 
             if (!rst.isEmpty) {
               //对应关系
-              val columns = rst.rawCells().map(c => Bytes.toString(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength))
-
+              val columns = rst.rawCells().map(c => Bytes.toString(c.getQualifierArray,
+                                                                   c.getQualifierOffset,
+                                                                   c.getQualifierLength)).filter(s => {s != "init_date"})
               for (m <- l) {
                 //m对应一条update记录
                 val entrust_status = m.get("ENTRUST_STATUS")
@@ -259,7 +261,7 @@ object OfentrustDetails {
                 })
               }
             } else {
-              logger.warn(s"position_str: ${rowkey} not find")
+              logger.warn(s"position: ${rowkey} not found in mapping")
             }
           }
         } catch {

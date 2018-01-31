@@ -106,7 +106,7 @@ object EntrustDetails {
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
                          "e.entrust_amount is not null and " +
-                         "e.init_date is not null").repartition(20)
+                         "e.init_date is not null").repartition(40)
 
         df.foreachPartition(iter => {
 
@@ -202,6 +202,7 @@ object EntrustDetails {
 
                     val putMapping = new Put(Bytes.toBytes(position_str.reverse))
                     putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes(rowkey), Bytes.toBytes("1"))
+                    putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("init_date"), Bytes.toBytes(init_date))
                     tableMapping.put(putMapping)
 
                     //记录条数汇总
@@ -245,7 +246,7 @@ object EntrustDetails {
       val rdd1 = rdd.filter(m => (m.contains("BUSINESS_BALANCE") &&
                                   (m("BUSINESS_BALANCE")._1 != m("BUSINESS_BALANCE")._2)))
       //相同postion_str 到一个分区 对应操作按pos排序
-      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(20).map(x => {
+      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(40).map(x => {
         val list = x._2.toList.sortWith((m1, m2) => {
           m1("pos")._1 < m2("pos")._1
         })
@@ -275,7 +276,9 @@ object EntrustDetails {
 
             if (!rst.isEmpty) {
               //对应关系
-              val columns = rst.rawCells().map(c => Bytes.toString(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength))
+              val columns = rst.rawCells().map(c => Bytes.toString(c.getQualifierArray,
+                                                                   c.getQualifierOffset,
+                                                                   c.getQualifierLength)).filter(s => {s != "init_date"})
               columns.map(t => {
                 //员工明细表
                 val key = t
@@ -307,6 +310,8 @@ object EntrustDetails {
                   jedisCluster.hincrByFloat(entrustKey, "entrust_balance", delta)
                 }
               })
+            } else {
+              logger.warn(s"position: ${rowkey} not found in mapping")
             }
           }
         } catch {

@@ -114,7 +114,7 @@ object RealtimeDetails {
                          "r.branch_no is not null and " +
                          "r.real_status is not null and " +
                          "r.real_type is not null and " +
-                         "r.init_date is not null").repartition(10)
+                         "r.init_date is not null").repartition(30)
 //        df.show(10)
 
         df.foreachPartition(iter => {

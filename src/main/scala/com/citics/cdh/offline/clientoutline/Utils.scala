@@ -23,7 +23,6 @@ object Utils {
 
   val hbaseTRealtimeDetails = "realtime:client_outline_realtime_details"
   val hbaseTEntrustDetails  = "realtime:client_outline_entrust_details"
-  val hbaseTEntrustMapping  = "realtime:client_outline_entrust_mapping"
   val hbaseTFoudjourDetails  = "realtime:client_outline_fundjour_details"
   val hbaseTCrdtrealtiemDetails = "realtime:client_outline_crdtrealtime_details"
   val hbaseTCrdtentrustDetails = "realtime:client_outline_crdtentrust_details"
@@ -31,10 +30,14 @@ object Utils {
   val hbaseTOptentrustDetails = "realtime:client_outline_optentrust_details"
   val hbaseTCtstentrustDetails = "realtime:client_outline_ctstentrust_details"
   val hbaseTOfentrustDetails = "realtime:client_outline_ofentrust_details"
-  val hbaseTOfentrustMapping = "realtime:client_outline_ofentrust_mapping"
   val hbaseTOtcbookorderDetails = "realtime:client_outline_otcborder_details"
   val hbaseTOtcorderDetails = "realtime:client_outline_otcorder_details"
   val hbaseTStockjourDetails = "realtime:client_outline_stockjour_details"
+
+  val hbaseTEntrustMapping  = "realtime:client_outline_entrust_mapping"
+  val hbaseTCrdtentrustMapping = "realtime:client_outline_crdtentrust_mapping"
+  val hbaseTOfentrustMapping = "realtime:client_outline_ofentrust_mapping"
+  val hbaseTTmp = "realtime:client_outline_tmp_details"
 
   val conf = HBaseConfiguration.create()
   conf.set("hbase.zookeeper.property.clientPort", hbasePort)
