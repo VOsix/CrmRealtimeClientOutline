@@ -288,7 +288,7 @@ object EntrustDetails {
                 if (!result.isEmpty) {
                   //读取更新前entrust_balance
                   val preBal = Bytes.toString(result.getValue(Bytes.toBytes("cf"), Bytes.toBytes("entrust_balance"))).toDouble
-                  println(s"${key}: ${preBal}->${bal}")
+//                  println(s"${key}: ${preBal}->${bal}")
 
                   val put = new Put(Bytes.toBytes(key))
                   //明细更新为最新值
@@ -310,8 +310,6 @@ object EntrustDetails {
                   jedisCluster.hincrByFloat(entrustKey, "entrust_balance", delta)
                 }
               })
-            } else {
-              logger.warn(s"position: ${rowkey} not found in mapping")
             }
           }
         } catch {

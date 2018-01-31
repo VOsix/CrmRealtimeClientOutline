@@ -225,7 +225,6 @@ object OfentrustDetails {
 
           for ((s, l) <- iter) {
 
-//            println(s"${s}: ${l}")
             val rowkey = s.reverse
             val get = new Get(Bytes.toBytes(rowkey))
             val rst = tableMapping.get(get)
@@ -260,8 +259,6 @@ object OfentrustDetails {
                   tableDetails.put(put)
                 })
               }
-            } else {
-              logger.warn(s"position: ${rowkey} not found in mapping")
             }
           }
         } catch {
