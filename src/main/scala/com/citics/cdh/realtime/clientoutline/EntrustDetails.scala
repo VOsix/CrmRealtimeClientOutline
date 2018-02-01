@@ -29,7 +29,7 @@ object EntrustDetails {
   def main(args: Array[String]): Unit = {
 
     val sc = new SparkContext(conf)
-    val ssc = new StreamingContext(sc, Seconds(10))
+    val ssc = new StreamingContext(sc, Seconds(20))
     val hvc = new HiveContext(sc)
 
     sc.setLogLevel("WARN")
@@ -41,6 +41,7 @@ object EntrustDetails {
     val lines = kafkaStream.map(_._2).flatMap(str => {
       str.split("}}").map(_ + "}}")
     })
+    lines.persist()
 
     val insertRecords = lines.filter(str => str.contains(Utils.insertOpt)).map(i => {
       Utils.insertRecordsConvert(i) match {
@@ -106,7 +107,7 @@ object EntrustDetails {
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
                          "e.entrust_amount is not null and " +
-                         "e.init_date is not null").repartition(40)
+                         "e.init_date is not null").repartition(30)
 
         df.foreachPartition(iter => {
 
@@ -246,7 +247,7 @@ object EntrustDetails {
       val rdd1 = rdd.filter(m => (m.contains("BUSINESS_BALANCE") &&
                                   (m("BUSINESS_BALANCE")._1 != m("BUSINESS_BALANCE")._2)))
       //相同postion_str 到一个分区 对应操作按pos排序
-      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(40).map(x => {
+      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(30).map(x => {
         val list = x._2.toList.sortWith((m1, m2) => {
           m1("pos")._1 < m2("pos")._1
         })
