@@ -137,9 +137,10 @@ object OfentrustDetails {
 
                   val staff_id = i.getOrElse("id", "")
                   val staff_name = i.getOrElse("name", "")
+                  val ts = (10000000000L - Utils.getUnixStamp(curr_time, "yyyy-MM-dd HH:mm:ss")).toString
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, init_date, position_str, fund_account, fund_code)
+                  val arr = Array(staff_id.reverse, init_date, ts, position_str, fund_account, fund_code)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
