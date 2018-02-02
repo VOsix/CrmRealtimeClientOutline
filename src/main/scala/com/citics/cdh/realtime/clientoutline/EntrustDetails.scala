@@ -49,7 +49,7 @@ object EntrustDetails {
       }
     })
 
-    val updateRecords = lines.filter(str => str.contains(Utils.updateOpt)).map(u => {
+    val updateRecords = lines.filter(str => str.contains(Utils.updateOpt) && str.contains("BUSINESS_BALANCE")).map(u => {
       Utils.updateRecordsConvert(u) match {
         case Some(m) => m
       }
@@ -243,11 +243,12 @@ object EntrustDetails {
 
     updateRecords.foreachRDD(rdd => {
 
+      val rdd0 = rdd.map(m => (m("POSITION_STR")._1, m)).partitionBy(new org.apache.spark.HashPartitioner(30))
       //过滤出 更新BUSINESS_BALANCE的记录
-      val rdd1 = rdd.filter(m => (m.contains("BUSINESS_BALANCE") &&
-                                  (m("BUSINESS_BALANCE")._1 != m("BUSINESS_BALANCE")._2)))
+      val rdd1 = rdd0.filter(m => (m._2.contains("BUSINESS_BALANCE") &&
+                                  (m._2("BUSINESS_BALANCE")._1 != m._2("BUSINESS_BALANCE")._2)))
       //相同postion_str 到一个分区 对应操作按pos排序
-      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(30).map(x => {
+      val rdd2 = rdd1.groupByKey().map(x => {
         val list = x._2.toList.sortWith((m1, m2) => {
           m1("pos")._1 < m2("pos")._1
         })

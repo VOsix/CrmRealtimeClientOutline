@@ -48,7 +48,7 @@ object CrdtentrustDetails {
       }
     })
 
-    val updateRecords = lines.filter(str => str.contains(Utils.updateOpt)).map(u => {
+    val updateRecords = lines.filter(str => str.contains(Utils.updateOpt) && str.contains("BUSINESS_BALANCE")).map(u => {
       Utils.updateRecordsConvert(u) match {
         case Some(m) => m
       }
