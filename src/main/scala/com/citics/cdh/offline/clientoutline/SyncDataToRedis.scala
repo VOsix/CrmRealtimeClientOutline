@@ -70,6 +70,9 @@ object SyncDataToRedis {
           jedisCluster.hincrBy(key, "ctstentrust_count", 0)
           jedisCluster.hincrBy(key, "otcbookorder_count", 0)
           jedisCluster.hincrBy(key, "otcorder_count", 0)
+          jedisCluster.hincrBy(key, "cbsrealtime_count", 0)
+          jedisCluster.hincrBy(key, "cbsentrust_count", 0)
+          jedisCluster.hincrBy(key, "cbpentrust_count", 0)
 
           //第二天零点失效
           jedisCluster.expireAt(key, Utils.getUnixStamp(Utils.getSpecDay(1, "yyyy-MM-dd"), "yyyy-MM-dd"))
