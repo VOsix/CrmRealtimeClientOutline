@@ -107,7 +107,7 @@ object CbsentrustDetails {
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
                          "e.entrust_amount is not null and " +
-                         "e.init_date is not null").repartition(5)
+                         "e.init_date is not null").repartition(6)
 
         df.foreachPartition(iter => {
 
@@ -244,7 +244,7 @@ object CbsentrustDetails {
 
     updateRecords.foreachRDD(rdd => {
 
-      val rdd0 = rdd.map(m => (m("POSITION_STR")._1, m)).partitionBy(new org.apache.spark.HashPartitioner(5))
+      val rdd0 = rdd.map(m => (m("POSITION_STR")._1, m)).partitionBy(new org.apache.spark.HashPartitioner(6))
       //过滤出 更新BUSINESS_BALANCE的记录
       val rdd1 = rdd0.filter(m => (m._2.contains("BUSINESS_BALANCE") &&
                                   (m._2("BUSINESS_BALANCE")._1 != m._2("BUSINESS_BALANCE")._2)))

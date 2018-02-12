@@ -63,7 +63,6 @@ object Utils {
   val hbaseTOtcorderDetails = "realtime:client_outline_otcorder_details"
   val hbaseTStockjourDetails = "realtime:client_outline_stockjour_details"
 
-
   //hive
   val hiveStockCode = "bf_hs_user.stkcode"
   val hiveSystemDict = "bf_hs_user.sysdictionary"
