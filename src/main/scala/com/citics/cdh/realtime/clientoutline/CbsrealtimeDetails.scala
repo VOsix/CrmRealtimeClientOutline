@@ -207,6 +207,7 @@ object CbsrealtimeDetails {
                       put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("branch_name"), Bytes.toBytes(branch_name))
                       put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("real_status"), Bytes.toBytes(real_status))
                       put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("real_type"), Bytes.toBytes(real_type))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("init_date"), Bytes.toBytes(init_date))
 
                       put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
                       put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))

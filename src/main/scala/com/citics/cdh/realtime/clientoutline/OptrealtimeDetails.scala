@@ -187,6 +187,7 @@ object OptrealtimeDetails {
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("balance"), Bytes.toBytes(balance))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("market_name"), Bytes.toBytes(market_name))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("real_name"), Bytes.toBytes(real_name))
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("init_date"), Bytes.toBytes(init_date))
 
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))

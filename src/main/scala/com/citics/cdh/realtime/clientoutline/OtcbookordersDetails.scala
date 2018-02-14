@@ -140,6 +140,7 @@ object OtcbookordersDetails {
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("amt"), Bytes.toBytes(amt))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("ord_type"), Bytes.toBytes(ord_type))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("ord_time"), Bytes.toBytes(ord_time))
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("init_date"), Bytes.toBytes(ord_time.split(" ")(0)))
 
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))

@@ -169,6 +169,7 @@ object StockjourDetails {
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("lastPrice"), Bytes.toBytes(lastPrice))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("out_asset"), Bytes.toBytes(out_asset))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("remark"), Bytes.toBytes(remark))
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("init_date"), Bytes.toBytes(init_date))
 
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))

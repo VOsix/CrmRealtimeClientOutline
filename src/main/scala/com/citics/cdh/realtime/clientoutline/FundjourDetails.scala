@@ -173,6 +173,7 @@ object FundjourDetails {
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("bank_name"), Bytes.toBytes(bank_name))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("business_flag"), Bytes.toBytes(business_flag))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("branch_name"), Bytes.toBytes(branch_name))
+                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("init_date"), Bytes.toBytes(init_date))
 
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))
