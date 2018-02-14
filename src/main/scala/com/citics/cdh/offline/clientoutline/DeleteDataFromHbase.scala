@@ -28,25 +28,25 @@ object DeleteDataFromHbase {
     val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1
     println(s"today is ${dayOfWeek}th day of week")
 
-    deleteData(Utils.hbaseTRealtimeDetails, 0)
-    deleteData(Utils.hbaseTEntrustDetails, 0)
-    deleteData(Utils.hbaseTFoudjourDetails, 0)
-    deleteData(Utils.hbaseTCrdtrealtiemDetails, 0)
-    deleteData(Utils.hbaseTCrdtentrustDetails, 0)
-    deleteData(Utils.hbaseTOptrealtimeDetails, 0)
-    deleteData(Utils.hbaseTOptentrustDetails, 0)
-    deleteData(Utils.hbaseTCtstentrustDetails, 0)
-    deleteData(Utils.hbaseTOfentrustDetails, 0)
-    deleteData(Utils.hbaseTOtcbookorderDetails, 0)
-    deleteData(Utils.hbaseTOtcorderDetails, 0)
-    deleteData(Utils.hbaseTStockjourDetails, 0)
+    deleteData(Utils.hbaseTRealtimeDetails)
+    deleteData(Utils.hbaseTEntrustDetails)
+    deleteData(Utils.hbaseTFoudjourDetails)
+    deleteData(Utils.hbaseTCrdtrealtiemDetails)
+    deleteData(Utils.hbaseTCrdtentrustDetails)
+    deleteData(Utils.hbaseTOptrealtimeDetails)
+    deleteData(Utils.hbaseTOptentrustDetails)
+    deleteData(Utils.hbaseTCtstentrustDetails)
+    deleteData(Utils.hbaseTOfentrustDetails)
+    deleteData(Utils.hbaseTOtcbookorderDetails)
+    deleteData(Utils.hbaseTOtcorderDetails)
+    deleteData(Utils.hbaseTStockjourDetails)
 
-    deleteData(Utils.hbaseTEntrustMapping, 1)
-    deleteData(Utils.hbaseTCrdtentrustMapping, 1)
-    deleteData(Utils.hbaseTOfentrustMapping, 1)
+    deleteData(Utils.hbaseTEntrustMapping)
+    deleteData(Utils.hbaseTCrdtentrustMapping)
+    deleteData(Utils.hbaseTOfentrustMapping)
   }
 
-  def deleteData(tn: String, ttype: Int): Unit = {
+  def deleteData(tn: String): Unit = {
 
     println(s"start truncate ${tn}...")
     var hbaseConnect: Connection = null
@@ -61,26 +61,12 @@ object DeleteDataFromHbase {
       //临时表清空
       admin.disableTable(tableTmp)
       admin.truncateTable(tableTmp, true)
+      moveData(tn, Utils.hbaseTTmp, hbaseConnect, mappingFilters)
 
-      ttype match {
-        case 0 => {
-          moveData(tn, Utils.hbaseTTmp, hbaseConnect, detailsFilters)
-          //明细表清空
-          admin.disableTable(tableName)
-          admin.truncateTable(tableName, true)
-
-          moveData(Utils.hbaseTTmp, tn, hbaseConnect, null)
-        }
-        case 1 => {
-          moveData(tn, Utils.hbaseTTmp, hbaseConnect, mappingFilters)
-          //明细表清空
-          admin.disableTable(tableName)
-          admin.truncateTable(tableName, true)
-
-          moveData(Utils.hbaseTTmp, tn, hbaseConnect, null)
-        }
-        case _ => {}
-      }
+      //表清空
+      admin.disableTable(tableName)
+      admin.truncateTable(tableName, true)
+      moveData(Utils.hbaseTTmp, tn, hbaseConnect, null)
 
       //临时表清空
       admin.disableTable(tableTmp)
@@ -108,9 +94,10 @@ object DeleteDataFromHbase {
   }
 
   def mappingFilters(): FilterList = {
+    //过滤大于等于当日的记录
     val singleColumnValueFilter = new SingleColumnValueFilter(
       Bytes.toBytes("cf"), Bytes.toBytes("init_date"),
-      CompareFilter.CompareOp.EQUAL,
+      CompareFilter.CompareOp.GREATER_OR_EQUAL,
       new BinaryComparator(Bytes.toBytes(Utils.getSpecDay(0, "yyyy-MM-dd"))))
     singleColumnValueFilter.setFilterIfMissing(true)
 
