@@ -29,7 +29,7 @@ object EntrustDetails {
   def main(args: Array[String]): Unit = {
 
     val sc = new SparkContext(conf)
-    val ssc = new StreamingContext(sc, Seconds(20))
+    val ssc = new StreamingContext(sc, Seconds(10))
     val hvc = new HiveContext(sc)
 
     sc.setLogLevel("WARN")
@@ -107,7 +107,7 @@ object EntrustDetails {
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
                          "e.entrust_amount is not null and " +
-                         "e.init_date is not null").repartition(30)
+                         "e.init_date is not null").repartition(40)
 
         df.foreachPartition(iter => {
 
@@ -245,7 +245,7 @@ object EntrustDetails {
 
     updateRecords.foreachRDD(rdd => {
 
-      val rdd0 = rdd.map(m => (m("POSITION_STR")._1, m)).partitionBy(new org.apache.spark.HashPartitioner(30))
+      val rdd0 = rdd.map(m => (m("POSITION_STR")._1, m)).partitionBy(new org.apache.spark.HashPartitioner(40))
       //过滤出 更新BUSINESS_BALANCE的记录
       val rdd1 = rdd0.filter(m => (m._2.contains("BUSINESS_BALANCE") &&
                                   (m._2("BUSINESS_BALANCE")._1 != m._2("BUSINESS_BALANCE")._2)))

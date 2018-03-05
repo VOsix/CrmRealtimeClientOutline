@@ -104,7 +104,7 @@ object OptrealtimeDetails {
                          "r.business_balance is not null and " +
                          "r.real_status is not null and " +
                          "r.real_type is not null and " +
-                         "r.init_date is not null").repartition(5)
+                         "r.init_date is not null").repartition(2)
 //        df.show(10)
 
         df.foreachPartition(iter => {

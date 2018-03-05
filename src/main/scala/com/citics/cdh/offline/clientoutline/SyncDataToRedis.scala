@@ -27,6 +27,7 @@ object SyncDataToRedis {
     import hvc.implicits._
     sc.setLogLevel("WARN")
 
+    hvc.udf.register("getStaffId", getStaffId)
     val i = args(0)
 
     i match {
@@ -38,10 +39,15 @@ object SyncDataToRedis {
 
   def calStaffInfoToRedis(hvc: HiveContext): Unit = {
 
-    val df = hvc.sql(s"select id as staff_id, COALESCE(ryxm,'') as staff_name from ${Utils.hiveEmployInfo} " +
-                     s"group by id, ryxm")
+    val df = hvc.sql("select getStaffId(id,0) as staff_id, COALESCE(ryxm,'') as staff_name " +
+                     s"from ${Utils.hiveEmployInfo} " +
+                     "group by id, ryxm")
+    val df1 = hvc.sql("select getStaffId(id,1) as staff_id, COALESCE(ryxm,'') as staff_name " +
+                      s"from ${Utils.hiveEmployInfo} " +
+                      "group by id, ryxm")
 
-    df.foreachPartition(iter => {
+    val df2 = df.unionAll(df1)
+    df2.foreachPartition(iter => {
 
       var jedisCluster: JedisCluster = null
       try {
@@ -94,19 +100,42 @@ object SyncDataToRedis {
 
   def calCustRelToRedis(hvc: HiveContext): Unit = {
 
-    val df = hvc.sql("select a.yskhh as client_id, COALESCE(a.khxm,'') as client_name, " +
-                     "b.ryxx as staff_id, COALESCE(c.ryxm,'') as staff_name " +
-                     s"from ${Utils.hiveClientInfo} a, " +
-                     s"${Utils.hiveClientRel} b, " +
-                     s"${Utils.hiveEmployInfo} c " +
-                     s"where a.id = b.khh and " +
-                     s"b.ryxx = c.id and " +
-                     s"a.yskhh is not null and " +
-                     s"b.ryxx is not null " +
-                     s"group by a.yskhh, a.khxm, b.ryxx, c.ryxm")
+    val staff_client_rln = hvc.sql("select a.yskhh as client_id, " +
+                                   "COALESCE(a.khxm,'') as client_name, " +
+                                   "getStaffId(b.ryxx, 0) as staff_id, " +
+                                   "COALESCE(c.ryxm,'') as staff_name " +
+                                   s"from ${Utils.hiveClientInfo} a, " +
+                                   s"${Utils.hiveClientRln} b, " +
+                                   s"${Utils.hiveEmployInfo} c " +
+                                   "where a.id = b.khh and " +
+                                   "b.ryxx = c.id and " +
+                                   "a.yskhh is not null and " +
+                                   "b.ryxx is not null " +
+                                   "group by a.yskhh, a.khxm, b.ryxx, c.ryxm").cache()
+
+    val group_leaders = hvc.sql(s"select distinct supr_empe_id from ${Utils.hiveGroupRln} " +
+                                "where supr_empe_id is not null")
+    group_leaders.registerTempTable("group_leaders")
+
+    val group_client_rln = hvc.sql("select gcl.src_stm_cust_no as client_id, " +
+                                   "COALESCE(cif.khxm,'') as client_name, " +
+                                   "getStaffId(gcl.empe_id, 1) as staff_id, " +
+                                   "COALESCE(eif.ryxm,'') as staff_name " +
+                                   s"from ${Utils.hiveGroupClientRln} gcl, " +
+                                   "group_leaders gld, " +
+                                   s"${Utils.hiveClientInfo} cif, " +
+                                   s"${Utils.hiveEmployInfo} eif " +
+                                   "where gcl.empe_id = gld.supr_empe_id and " +
+                                   "cif.appid = 4 and " +
+                                   "gcl.src_stm_cust_no = cif.yskhh and " +
+                                   "gcl.empe_id = eif.id and " +
+                                   "gcl.src_stm_cust_no is not null " +
+                                   "group by gcl.src_stm_cust_no, cif.khxm, gcl.empe_id, eif.ryxm").cache()
+
+    val df = staff_client_rln.unionAll(group_client_rln)
 
     val rdd = df.map(r => (r.getAs[String]("client_id"), (r.getAs[String]("client_name"),
-                           r.getAs[Long]("staff_id").toString, r.getAs[String]("staff_name")))).groupByKey()
+                           r.getAs[String]("staff_id").toString, r.getAs[String]("staff_name")))).groupByKey()
 
     rdd.map(x => {
 
@@ -132,6 +161,7 @@ object SyncDataToRedis {
       try {
         jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
         for (r <- iter) {
+//          println(r)
           val client_id = r._1
           val client_name = r._2
           val staff_list = r._3
@@ -156,4 +186,10 @@ object SyncDataToRedis {
     })
   }
 
+  def getStaffId = (id: Long, t: Int) => {
+    if(t == 0)
+      id.toString
+    else
+      "g" + id.toString
+  }
 }

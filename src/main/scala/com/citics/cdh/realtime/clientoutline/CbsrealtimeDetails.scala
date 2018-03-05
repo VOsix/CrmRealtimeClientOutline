@@ -113,7 +113,7 @@ object CbsrealtimeDetails {
                          "r.branch_no is not null and " +
                          "r.real_status is not null and " +
                          "r.real_type is not null and " +
-                         "r.init_date is not null").repartition(6)
+                         "r.init_date is not null").repartition(2)
 //        df.show(10)
 
         df.foreachPartition(iter => {

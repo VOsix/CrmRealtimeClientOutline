@@ -102,7 +102,7 @@ object OptentrustDetails {
                          "e.option_code is not null and " +
                          "e.opt_entrust_price is not null and " +
                          "e.entrust_amount is not null and " +
-                         "e.init_date is not null").repartition(5)
+                         "e.init_date is not null").repartition(2)
 
         df.foreachPartition(iter => {
 

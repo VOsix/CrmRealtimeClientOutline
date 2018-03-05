@@ -90,7 +90,7 @@ object OfentrustDetails {
                          "e.entrust_price is not null and " +
                          "e.deal_share is not null and " +
                          "e.balance is not null and " +
-                         "e.init_date is not null").repartition(5)
+                         "e.init_date is not null").repartition(2)
 //        df.show(10)
 
         df.foreachPartition(iter => {
@@ -206,7 +206,7 @@ object OfentrustDetails {
       val rdd1 = rdd.filter(m => (m.contains("ENTRUST_STATUS") || m.contains("ENTRUST_PRICE") ||
                                   m.contains("DEAL_SHARE") || m.contains("BALANCE")) && m.contains("POSITION_STR"))
       //相同postion_str 到一个分区 对应操作按pos排序
-      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(5).map(x => {
+      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(2).map(x => {
         (x._1, x._2.toList.sortWith((m1, m2) => {
           m1("pos")._1 < m2("pos")._1
         }))

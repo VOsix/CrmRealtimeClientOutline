@@ -106,7 +106,7 @@ object CrdtentrustDetails {
                          "e.stock_code is not null and " +
                          "e.entrust_price is not null and " +
                          "e.entrust_amount is not null and " +
-                         "e.init_date is not null").repartition(10)
+                         "e.init_date is not null").repartition(4)
 
         df.foreachPartition(iter => {
 
@@ -249,7 +249,7 @@ object CrdtentrustDetails {
       val rdd1 = rdd.filter(m => (m.contains("BUSINESS_BALANCE") &&
                             (m("BUSINESS_BALANCE")._1 != m("BUSINESS_BALANCE")._2)))
       //相同postion_str 到一个分区 对应操作按pos排序
-      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(10).map(x => {
+      val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(4).map(x => {
         val list = x._2.toList.sortWith((m1, m2) => {
           m1("pos")._1 < m2("pos")._1
         })

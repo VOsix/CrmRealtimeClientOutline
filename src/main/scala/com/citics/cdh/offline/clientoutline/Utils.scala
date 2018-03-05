@@ -16,7 +16,9 @@ object Utils {
 
   val hiveClientInfo = "bf_ap_crm.tkhxx"
   val hiveEmployInfo = "bf_ap_crm.tryxx"
-  val hiveClientRel = "bf_ap_crm.tkhgx"
+  val hiveClientRln  = "bf_ap_crm.tkhgx"
+  val hiveGroupClientRln = "bf_zx_ncrm.t_empe_cust_prvg"
+  val hiveGroupRln  = "bf_zx_ncrm.t_empe_empe_prvg"
 
   val hbaseHosts = "10.23.147.32,10.23.147.33,10.23.147.39"
   val hbasePort = "2181"
@@ -48,7 +50,7 @@ object Utils {
   }
 
   val jedisConf = new JedisPoolConfig()
-  jedisConf.setMaxTotal(100)
+  jedisConf.setMaxTotal(500)
   jedisConf.setMaxIdle(50)
   jedisConf.setMinIdle(20)
   jedisConf.setMaxWaitMillis(6 * 1000)
@@ -64,6 +66,9 @@ object Utils {
   jedisClusterNodes.add(new HostAndPort("10.23.152.240", 7001))
   val redisClientRelKey = "realtime:crm:client_rel:client_id:%s"
   val redisStaffInfoKey = "realtime:crm:staff_info:staff_id:%s"
+
+//  val redisClientRelKeyTest = "realtime:crm:client_rel:test:client_id:%s"
+//  val redisStaffInfoKeyTest = "realtime:crm:staff_info:test:staff_id:%s"
 
   def getSpecDay(days: Int, format: String): String = {
     val c = Calendar.getInstance()

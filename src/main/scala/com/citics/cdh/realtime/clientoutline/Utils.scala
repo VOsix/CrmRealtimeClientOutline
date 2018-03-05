@@ -22,7 +22,7 @@ object Utils {
   val logger = LoggerFactory.getLogger(getClass)
 
   //kafka
-  val brokerList = "kk01.cshadoop.com:9092,kk02.cshadoop.com:9092,nn03.cshadoop.com:9092"
+  val brokerList = "kk01.cshadoop.com:9092,kk02.cshadoop.com:9092,kk03.cshadoop.com:9092,kk04.cshadoop.com:9092,nn03.cshadoop.com:9092"
   val topicOggRealtime     = "ogg-realtime"
   val topicOggEntrust      = "ogg-entrust"
   val topicOggFoudjour     = "ogg-fundjour"
@@ -73,7 +73,7 @@ object Utils {
 
   //redis
   val jedisConf = new JedisPoolConfig()
-  jedisConf.setMaxTotal(100)
+  jedisConf.setMaxTotal(500)
   jedisConf.setMaxIdle(50)
   jedisConf.setMinIdle(20)
   jedisConf.setMaxWaitMillis(6 * 1000)

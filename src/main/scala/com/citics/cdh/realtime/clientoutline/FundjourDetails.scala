@@ -101,7 +101,7 @@ object FundjourDetails {
                          "f.occur_balance is not null and " +
                          "f.bank_no is not null and " +
                          "f.business_flag is not null and " +
-                         "f.init_date is not null").repartition(10)
+                         "f.init_date is not null").repartition(4)
 
         df.foreachPartition(iter => {
 

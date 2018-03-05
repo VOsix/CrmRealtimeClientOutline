@@ -81,7 +81,7 @@ object OtcbookordersDetails {
                          "e.ord_amt is not null and " +
                          "e.ord_qty is not null and " +
                          "e.trd_id is not null and " +
-                         "e.book_timestamp is not null").repartition(5)
+                         "e.book_timestamp is not null").repartition(2)
 
         df.foreachPartition(iter => {
 

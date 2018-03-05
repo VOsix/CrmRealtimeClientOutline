@@ -83,7 +83,7 @@ object OtcordersDetails {
                          "e.ord_qty is not null and " +
                          "e.trd_id is not null and " +
                          "e.app_timestamp is not null and " +
-                         "e.trd_date is not null").repartition(5)
+                         "e.trd_date is not null").repartition(2)
 
         df.foreachPartition(iter => {
 

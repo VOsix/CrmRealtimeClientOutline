@@ -91,7 +91,7 @@ object StockjourDetails {
                          "s.branch_no is not null and " +
                          "s.occur_amount is not null and " +
                          "s.money_type is not null and " +
-                         "s.init_date is not null").repartition(5)
+                         "s.init_date is not null").repartition(2)
 //        df.show(10)
 
         df.foreachPartition(iter => {
