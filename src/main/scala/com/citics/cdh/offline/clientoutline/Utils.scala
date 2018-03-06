@@ -19,6 +19,7 @@ object Utils {
   val hiveClientRln  = "bf_ap_crm.tkhgx"
   val hiveGroupClientRln = "bf_zx_ncrm.t_empe_cust_prvg"
   val hiveGroupRln  = "bf_zx_ncrm.t_empe_empe_prvg"
+  val hiveHsClient = "bf_hs_asset.client"
 
   val hbaseHosts = "10.23.147.32,10.23.147.33,10.23.147.39"
   val hbasePort = "2181"

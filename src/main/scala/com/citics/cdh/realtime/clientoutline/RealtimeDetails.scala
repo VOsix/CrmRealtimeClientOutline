@@ -29,7 +29,7 @@ object RealtimeDetails {
   def main(args: Array[String]): Unit = {
 
     val sc = new SparkContext(conf)
-    val ssc = new StreamingContext(sc, Seconds(10))
+    val ssc = new StreamingContext(sc, Seconds(20))
     val hvc = new HiveContext(sc)
     import hvc.implicits._
 

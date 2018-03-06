@@ -118,19 +118,18 @@ object SyncDataToRedis {
     group_leaders.registerTempTable("group_leaders")
 
     val group_client_rln = hvc.sql("select gcl.src_stm_cust_no as client_id, " +
-                                   "COALESCE(cif.khxm,'') as client_name, " +
+                                   "COALESCE(cif.client_name,'') as client_name, " +
                                    "getStaffId(gcl.empe_id, 1) as staff_id, " +
                                    "COALESCE(eif.ryxm,'') as staff_name " +
                                    s"from ${Utils.hiveGroupClientRln} gcl, " +
                                    "group_leaders gld, " +
-                                   s"${Utils.hiveClientInfo} cif, " +
+                                   s"${Utils.hiveHsClient} cif, " +
                                    s"${Utils.hiveEmployInfo} eif " +
                                    "where gcl.empe_id = gld.supr_empe_id and " +
-                                   "cif.appid = 4 and " +
-                                   "gcl.src_stm_cust_no = cif.yskhh and " +
+                                   "gcl.src_stm_cust_no = cif.client_id and " +
                                    "gcl.empe_id = eif.id and " +
                                    "gcl.src_stm_cust_no is not null " +
-                                   "group by gcl.src_stm_cust_no, cif.khxm, gcl.empe_id, eif.ryxm").cache()
+                                   "group by gcl.src_stm_cust_no, cif.client_name, gcl.empe_id, eif.ryxm").cache()
 
     val df = staff_client_rln.unionAll(group_client_rln)
 
