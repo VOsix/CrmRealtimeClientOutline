@@ -102,6 +102,7 @@ object RealtimeDetails {
                          "on r.branch_no = br.branch_no " +
                          "where r.real_status != '2' and " +
                          "r.real_type != '2' and " +
+                         "r.stock_code != '799999' and " +
                          "r.position_str is not null and " +
                          "r.fund_account is not null and " +
                          "r.client_id is not null and " +

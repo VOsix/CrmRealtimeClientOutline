@@ -98,6 +98,7 @@ object EntrustDetails {
                          "left outer join tmp_moneytype mt " +
                          "on e.money_type = mt.subentry " +
                          "where e.entrust_type = '0' and " +
+                         "e.stock_code != '799999' and " +
                          "e.position_str is not null and " +
                          "e.branch_no is not null and " +
                          "e.fund_account is not null and " +
