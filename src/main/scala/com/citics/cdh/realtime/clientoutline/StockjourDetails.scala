@@ -97,13 +97,12 @@ object StockjourDetails {
         df.foreachPartition(iter => {
 
           var jedisCluster: JedisCluster = null
-          var hbaseConnect: Connection = null
+          val hbaseConnect: Connection = HbaseUtils.getConnect()
           var tableDetails: Table = null
           var tablePrice: Table = null
 
           try {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
-            hbaseConnect = HbaseUtils.getConnect()
             var tableName = TableName.valueOf(Utils.hbaseTStockjourDetails)
             tableDetails = hbaseConnect.getTable(tableName)
             tableName = TableName.valueOf(Utils.hbaseTPrice)
@@ -209,8 +208,8 @@ object StockjourDetails {
               tableDetails.close()
             if (tablePrice != null)
               tablePrice.close()
-            if (hbaseConnect != null)
-              hbaseConnect.close()
+//            if (hbaseConnect != null)
+//              hbaseConnect.close()
           }
         })
       }

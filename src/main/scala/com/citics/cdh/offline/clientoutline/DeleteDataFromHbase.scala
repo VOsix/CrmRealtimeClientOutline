@@ -5,7 +5,7 @@ import java.util
 import java.util.{Calendar, Date}
 
 import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.hadoop.hbase.TableName
+import org.apache.hadoop.hbase.{HColumnDescriptor, HTableDescriptor, TableName}
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.filter._
 import org.apache.hadoop.hbase.util.Bytes
@@ -28,27 +28,27 @@ object DeleteDataFromHbase {
     val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1
     println(s"today is ${dayOfWeek}th day of week")
 
-    deleteData(Utils.hbaseTRealtimeDetails)
-    deleteData(Utils.hbaseTEntrustDetails)
-    deleteData(Utils.hbaseTFoudjourDetails)
-    deleteData(Utils.hbaseTCrdtrealtiemDetails)
-    deleteData(Utils.hbaseTCrdtentrustDetails)
-    deleteData(Utils.hbaseTOptrealtimeDetails)
-    deleteData(Utils.hbaseTOptentrustDetails)
-    deleteData(Utils.hbaseTCtstentrustDetails)
-    deleteData(Utils.hbaseTOfentrustDetails)
-    deleteData(Utils.hbaseTOtcbookorderDetails)
-    deleteData(Utils.hbaseTOtcorderDetails)
-    deleteData(Utils.hbaseTStockjourDetails)
+    deleteData(Utils.hbaseTRealtimeDetails, 1)
+    deleteData(Utils.hbaseTEntrustDetails, 1)
+    deleteData(Utils.hbaseTFoudjourDetails, 1)
+    deleteData(Utils.hbaseTCrdtrealtiemDetails, 1)
+    deleteData(Utils.hbaseTCrdtentrustDetails, 1)
+    deleteData(Utils.hbaseTOptrealtimeDetails, 0)
+    deleteData(Utils.hbaseTOptentrustDetails, 0)
+    deleteData(Utils.hbaseTCtstentrustDetails, 0)
+    deleteData(Utils.hbaseTOfentrustDetails, 0)
+    deleteData(Utils.hbaseTOtcbookorderDetails, 0)
+    deleteData(Utils.hbaseTOtcorderDetails, 0)
+    deleteData(Utils.hbaseTStockjourDetails, 0)
 
-    deleteData(Utils.hbaseTEntrustMapping)
-    deleteData(Utils.hbaseTCrdtentrustMapping)
-    deleteData(Utils.hbaseTOfentrustMapping)
+    deleteData(Utils.hbaseTEntrustMapping, 1)
+    deleteData(Utils.hbaseTCrdtentrustMapping, 0)
+    deleteData(Utils.hbaseTOfentrustMapping, 0)
   }
 
-  def deleteData(tn: String): Unit = {
+  def deleteData(tn: String, split: Int): Unit = {
 
-    println(s"start truncate ${tn}...")
+    println(s"start delete ${tn}...")
     var hbaseConnect: Connection = null
     var admin: Admin = null
 
@@ -64,8 +64,32 @@ object DeleteDataFromHbase {
       moveData(tn, Utils.hbaseTTmp, hbaseConnect, mappingFilters)
 
       //表清空
-      admin.disableTable(tableName)
-      admin.truncateTable(tableName, true)
+      if (split == 0) {
+        admin.disableTable(tableName)
+        admin.truncateTable(tableName, true)
+        println(s"truncate table ${tn}...")
+      } else {
+        //预分区
+        admin.disableTable(tableName)
+        admin.deleteTable(tableName)
+        println(s"drop table ${tn}...")
+
+        val htd = new HTableDescriptor(tableName)
+        val hcd = new HColumnDescriptor(Bytes.toBytes("cf"))
+        htd.addFamily(hcd)
+
+        admin.createTable(htd, Array(Bytes.toBytes("04|"),
+          Bytes.toBytes("10|"),Bytes.toBytes("14|"),
+          Bytes.toBytes("20|"),Bytes.toBytes("24|"),
+          Bytes.toBytes("30|"),Bytes.toBytes("34|"),
+          Bytes.toBytes("40|"),Bytes.toBytes("44|"),
+          Bytes.toBytes("50|"),Bytes.toBytes("54|"),
+          Bytes.toBytes("60|"),Bytes.toBytes("64|"),
+          Bytes.toBytes("70|"),Bytes.toBytes("74|"),
+          Bytes.toBytes("80|"),Bytes.toBytes("84|"),
+          Bytes.toBytes("90|"),Bytes.toBytes("94|")))
+        println(s"create table ${tn} with pre_splits...")
+      }
       moveData(Utils.hbaseTTmp, tn, hbaseConnect, null)
 
       //临时表清空

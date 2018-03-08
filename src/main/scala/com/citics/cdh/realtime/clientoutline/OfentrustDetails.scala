@@ -95,14 +95,13 @@ object OfentrustDetails {
 
         df.foreachPartition(iter => {
 
+          val hbaseConnect: Connection = HbaseUtils.getConnect()
           var jedisCluster: JedisCluster = null
-          var hbaseConnect: Connection = null
           var tableDetails: Table = null
           var tableMapping: Table = null
 
           try {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
-            hbaseConnect = HbaseUtils.getConnect()
             var tableName = TableName.valueOf(Utils.hbaseTOfentrustDetails)
             tableDetails = hbaseConnect.getTable(tableName)
             tableName = TableName.valueOf(Utils.hbaseTOfentrustMapping)
@@ -195,8 +194,8 @@ object OfentrustDetails {
               tableDetails.close()
             if (tableMapping != null)
               tableMapping.close()
-            if (hbaseConnect != null)
-              hbaseConnect.close()
+//            if (hbaseConnect != null)
+//              hbaseConnect.close()
           }
         })
       }
@@ -214,12 +213,12 @@ object OfentrustDetails {
 
       rdd2.foreachPartition(iter => {
 
-        var hbaseConnect: Connection = null
+        val hbaseConnect: Connection = HbaseUtils.getConnect()
         var tableMapping: Table = null
         var tableDetails: Table = null
 
         try {
-          hbaseConnect = HbaseUtils.getConnect()
+//          hbaseConnect = HbaseUtils.getConnect()
           var tableName = TableName.valueOf(Utils.hbaseTOfentrustMapping)
           tableMapping = hbaseConnect.getTable(tableName)
           tableName = TableName.valueOf(Utils.hbaseTOfentrustDetails)
@@ -272,8 +271,8 @@ object OfentrustDetails {
             tableMapping.close()
           if (tableDetails != null)
             tableDetails.close()
-          if (hbaseConnect != null)
-            hbaseConnect.close()
+//          if (hbaseConnect != null)
+//            hbaseConnect.close()
         }
       })
     })

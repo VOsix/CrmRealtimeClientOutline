@@ -118,13 +118,12 @@ object CbsrealtimeDetails {
 
         df.foreachPartition(iter => {
 
+          val hbaseConnect: Connection = HbaseUtils.getConnect()
           var jedisCluster: JedisCluster = null
-          var hbaseConnect: Connection = null
           var table: Table = null
 
           try {
             jedisCluster = new JedisCluster(Utils.jedisClusterNodes, 2000, 100, Utils.jedisConf)
-            hbaseConnect = HbaseUtils.getConnect()
             val tableName = TableName.valueOf(Utils.hbaseTRealtimeDetails)
             table = hbaseConnect.getTable(tableName)
 
@@ -259,8 +258,8 @@ object CbsrealtimeDetails {
               jedisCluster.close()
             if (table != null)
               table.close()
-            if (hbaseConnect != null)
-              hbaseConnect.close()
+//            if (hbaseConnect != null)
+//              hbaseConnect.close()
           }
         })
       }

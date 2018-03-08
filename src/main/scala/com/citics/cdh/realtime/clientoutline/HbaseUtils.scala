@@ -1,5 +1,7 @@
 package com.citics.cdh.realtime.clientoutline
 
+import java.util.concurrent.Executors
+
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
 import org.apache.hadoop.hbase.client._
@@ -21,10 +23,22 @@ object HbaseUtils {
   conf.set("hbase.zookeeper.property.clientPort", Utils.hbasePort)
   conf.set("hbase.zookeeper.quorum", Utils.hbaseHosts)
 
+  var conn: Connection = null
   val logger = LoggerFactory.getLogger(getClass)
 
   def getConnect(): Connection = {
-    val conn = ConnectionFactory.createConnection(conf)
+    if (conn == null) {
+      logger.warn("create hbase connect")
+      val pool = Executors.newFixedThreadPool(5)
+      try {
+        conn = ConnectionFactory.createConnection(conf, pool)
+      } catch {
+        case ex: Exception => {
+          ex.printStackTrace()
+          throw ex
+        }
+      }
+    }
     conn
   }
 
