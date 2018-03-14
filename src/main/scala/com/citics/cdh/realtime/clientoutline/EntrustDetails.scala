@@ -165,6 +165,9 @@ object EntrustDetails {
                     moneytype_name = stockInfo._2
                 }
 
+                val details_puts = new util.ArrayList[Put]()
+                val map_puts = new util.ArrayList[Put]()
+
                 for (i <- staff_list) {
 
                   val staff_id = i.getOrElse("id", "")
@@ -202,12 +205,28 @@ object EntrustDetails {
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_name"), Bytes.toBytes(staff_name))
                     put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("init_date"), Bytes.toBytes(init_date))
 
-                    tableDetails.put(put)
+//                    tableDetails.put(put)
+
+                    details_puts.add(put)
+                    if (details_puts.size() == 100) {
+                      //100条提交一次
+                      tableDetails.put(details_puts)
+                      details_puts.clear()
+                      logger.warn("details hbase commit...")
+                    }
 
                     val putMapping = new Put(Bytes.toBytes(position_str.reverse))
                     putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes(rowkey), Bytes.toBytes("1"))
                     putMapping.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("init_date"), Bytes.toBytes(init_date))
-                    tableMapping.put(putMapping)
+//                    tableMapping.put(putMapping)
+
+                    map_puts.add(putMapping)
+                    if (map_puts.size() == 100) {
+                      //100条提交一次
+                      tableMapping.put(map_puts)
+                      map_puts.clear()
+                      logger.warn("map hbase commit...")
+                    }
 
                     //记录条数汇总
                     jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "entrust_count", 1)
@@ -223,6 +242,11 @@ object EntrustDetails {
                     jedisCluster.hincrByFloat(entrustKey, "entrust_balance", entrust_balance.toDouble)
                   }
                 }
+
+                if (details_puts.size() > 0)
+                  tableDetails.put(details_puts)
+                if (map_puts.size() > 0)
+                  tableMapping.put(map_puts)
               }
             }
           } catch {

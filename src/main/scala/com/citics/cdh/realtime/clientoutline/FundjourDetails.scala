@@ -67,6 +67,7 @@ object FundjourDetails {
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1101").registerTempTable("tmp_moneytype")
         hvc.udf.register("concatDateTime", Utils.concatDateTime2)
 
+        val today = Utils.getSpecDay(0, "yyyyMMdd")
         val df = hvc.sql("select f.position_str, f.branch_no, f.fund_account, f.client_id, " +
                          "concatDateTime(f.curr_date, f.curr_time) as curr_time, " +
                          "COALESCE(mt.DICT_PROMPT,'') as money_type_name, " +
@@ -91,6 +92,7 @@ object FundjourDetails {
                          "left outer join tmp_moneytype mt " +
                          "on f.money_type = mt.subentry " +
                          "where f.business_flag not in (2317, 2318, 4170) and " +
+                         s"f.init_date >= '${today}' and " +
                          "f.position_str is not null and " +
                          "f.branch_no is not null and " +
                          "f.fund_account is not null and " +

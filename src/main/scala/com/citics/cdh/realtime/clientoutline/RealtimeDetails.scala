@@ -176,6 +176,8 @@ object RealtimeDetails {
 
                 if (stock_type != "4") {
                   //非普通申购
+                  val puts = new util.ArrayList[Put]()
+
                   for (i <- staff_list) {
                     val staff_id = i.getOrElse("id", "")
                     val staff_name = i.getOrElse("name", "")
@@ -214,7 +216,13 @@ object RealtimeDetails {
                       put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))
                       put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_name"), Bytes.toBytes(staff_name))
 
-                      table.put(put)
+//                      table.put(put)
+                      puts.add(put)
+                      if (puts.size() == 100) {
+                        table.put(puts)
+                        puts.clear()
+                        logger.warn("details hbase commit...")
+                      }
 
                       //当日聚合统计
                       if (init_date == Utils.getSpecDay(0, "yyyy-MM-dd")) {
@@ -246,6 +254,9 @@ object RealtimeDetails {
                         }
                       }
                     }
+                  }
+                  if (puts.size() > 0) {
+                    table.put(puts)
                   }
                 }
               }
