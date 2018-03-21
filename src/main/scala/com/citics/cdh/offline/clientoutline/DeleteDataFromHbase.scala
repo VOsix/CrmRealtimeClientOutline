@@ -76,6 +76,8 @@ object DeleteDataFromHbase {
 
         val htd = new HTableDescriptor(tableName)
         val hcd = new HColumnDescriptor(Bytes.toBytes("cf"))
+        //开启同步
+        hcd.setScope(1)
         htd.addFamily(hcd)
 
         admin.createTable(htd, Array(Bytes.toBytes("04|"),
