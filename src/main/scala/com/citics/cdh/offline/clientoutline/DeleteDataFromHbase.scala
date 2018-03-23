@@ -8,6 +8,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.hadoop.hbase.{HColumnDescriptor, HTableDescriptor, TableName}
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.filter._
+import org.apache.hadoop.hbase.io.compress.Compression
 import org.apache.hadoop.hbase.util.Bytes
 
 import scala.collection.JavaConversions._
@@ -78,6 +79,7 @@ object DeleteDataFromHbase {
         val hcd = new HColumnDescriptor(Bytes.toBytes("cf"))
         //开启同步
         hcd.setScope(1)
+        hcd.setCompressionType(Compression.Algorithm.SNAPPY)
         htd.addFamily(hcd)
 
         admin.createTable(htd, Array(Bytes.toBytes("04|"),
