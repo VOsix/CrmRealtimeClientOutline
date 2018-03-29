@@ -74,6 +74,7 @@ object EntrustDetails {
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1101").registerTempTable("tmp_moneytype")
         hvc.udf.register("concatDateTime", Utils.concatDateTime)
 
+        val today = Utils.getSpecDay(0, "yyyyMMdd")
         val df = hvc.sql("select e.position_str, e.branch_no, e.fund_account, e.client_id, " +
                          "concatDateTime(e.curr_date, e.curr_time) as curr_time, " +
                          "e.stock_code as stkcode, COALESCE(c.stock_name,'') as stkname, " +
@@ -97,7 +98,8 @@ object EntrustDetails {
                          "on e.exchange_type = et.subentry " +
                          "left outer join tmp_moneytype mt " +
                          "on e.money_type = mt.subentry " +
-                         "where e.entrust_type = '0' and " +
+                         s"where e.init_date >= '${today}' and " +
+                         "e.entrust_type = '0' and " +
                          "e.stock_code != '799999' and " +
                          "e.position_str is not null and " +
                          "e.branch_no is not null and " +
