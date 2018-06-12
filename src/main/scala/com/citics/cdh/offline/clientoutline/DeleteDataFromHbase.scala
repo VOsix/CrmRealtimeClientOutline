@@ -28,6 +28,7 @@ object DeleteDataFromHbase {
     cal.setTime(new Date())
     val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1
     println(s"today is ${dayOfWeek}th day of week")
+    println(s"today is ${Utils.getSpecDay(0, "yyyy-MM-dd")}")
 
     deleteData(Utils.hbaseTRealtimeDetails, 1)
     deleteData(Utils.hbaseTEntrustDetails, 1)
