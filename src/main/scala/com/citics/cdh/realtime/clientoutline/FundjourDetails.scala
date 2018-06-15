@@ -151,7 +151,7 @@ object FundjourDetails {
                   val ts = (10000000000L - Utils.getUnixStamp(curr_time, "yyyy-MM-dd HH:mm:ss")).toString
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, init_date, ts, position_str, fund_account)
+                  val arr = Array(staff_id.reverse, ts, init_date, position_str, fund_account)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))

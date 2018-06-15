@@ -115,42 +115,44 @@ object OtcbookordersDetails {
                 val ord_type = r(6).toString
                 val ord_time = r(7).toString
 
-                for (i <- staff_list) {
+                if (ord_time.split(" ")(0) >= Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                  for (i <- staff_list) {
 
-                  val staff_id = i.getOrElse("id", "")
-                  val staff_name = i.getOrElse("name", "")
-                  val ts = (10000000000L - Utils.getUnixStamp(ord_time, "yyyy-MM-dd HH:mm:ss")).toString
+                    val staff_id = i.getOrElse("id", "")
+                    val staff_name = i.getOrElse("name", "")
+                    val ts = (10000000000L - Utils.getUnixStamp(ord_time, "yyyy-MM-dd HH:mm:ss")).toString
 
-                  //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, ord_time.split(" ")(0), ts, position_str, fund_account)
-                  val rowkey = arr.mkString(",")
-                  val putTry = new Put(Bytes.toBytes(rowkey))
-                  putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
+                    //staff_id 逆序 同一员工下按position_str排序
+                    val arr = Array(staff_id.reverse, ts, ord_time.split(" ")(0), position_str, fund_account)
+                    val rowkey = arr.mkString(",")
+                    val putTry = new Put(Bytes.toBytes(rowkey))
+                    putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
 
-                  if (table.checkAndPut(Bytes.toBytes(rowkey), Bytes.toBytes("cf"), Bytes.toBytes("exist"), null, putTry)) {
-                    //检验hbase无此明细 确保重提唯一性
-                    //hbase 记录明细
-                    val put = new Put(Bytes.toBytes(rowkey))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("position_str"), Bytes.toBytes(position_str))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_id"), Bytes.toBytes(client_id))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("fund_account"), Bytes.toBytes(fund_account))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("fund_code"), Bytes.toBytes(fund_code))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("fund_name"), Bytes.toBytes(fund_name))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("amt"), Bytes.toBytes(amt))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("ord_type"), Bytes.toBytes(ord_type))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("ord_time"), Bytes.toBytes(ord_time))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("init_date"), Bytes.toBytes(ord_time.split(" ")(0)))
+                    if (table.checkAndPut(Bytes.toBytes(rowkey), Bytes.toBytes("cf"), Bytes.toBytes("exist"), null, putTry)) {
+                      //检验hbase无此明细 确保重提唯一性
+                      //hbase 记录明细
+                      val put = new Put(Bytes.toBytes(rowkey))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("position_str"), Bytes.toBytes(position_str))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_id"), Bytes.toBytes(client_id))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("fund_account"), Bytes.toBytes(fund_account))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("fund_code"), Bytes.toBytes(fund_code))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("fund_name"), Bytes.toBytes(fund_name))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("amt"), Bytes.toBytes(amt))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("ord_type"), Bytes.toBytes(ord_type))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("ord_time"), Bytes.toBytes(ord_time))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("init_date"), Bytes.toBytes(ord_time.split(" ")(0)))
 
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))
-                    put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_name"), Bytes.toBytes(staff_name))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("client_name"), Bytes.toBytes(client_name))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_id"), Bytes.toBytes(staff_id))
+                      put.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("staff_name"), Bytes.toBytes(staff_name))
 
-                    table.put(put)
+                      table.put(put)
 
-                    //当日聚合统计
-                    if (ord_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
-                      //记录条数汇总
-                      jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "otcbookorder_count", 1)
+                      //当日聚合统计
+                      if (ord_time.split(" ")(0) == Utils.getSpecDay(0, "yyyy-MM-dd")) {
+                        //记录条数汇总
+                        jedisCluster.hincrBy(String.format(Utils.redisStaffInfoKey, staff_id), "otcbookorder_count", 1)
+                      }
                     }
                   }
                 }

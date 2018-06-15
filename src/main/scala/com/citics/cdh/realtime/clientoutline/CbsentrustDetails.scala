@@ -170,7 +170,7 @@ object CbsentrustDetails {
                   val ts = (10000000000L - Utils.getUnixStamp(curr_time, "yyyy-MM-dd HH:mm:ss")).toString
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, init_date, ts, position_str, client_name, fund_account, stkcode, stock_type)
+                  val arr = Array(staff_id.reverse, ts, init_date, position_str, client_name, fund_account, stkcode, stock_type)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
@@ -300,7 +300,7 @@ object CbsentrustDetails {
 
                   //redis金额统计更新
                   //实时汇总部分
-                  val init_date = key.split(",")(1)
+                  val init_date = key.split(",")(2)
                   val delta = bal.toDouble - preBal
                   val staff_id = key.split(",")(0).reverse
                   val entrustKey = String.format(Utils.redisAggregateEntrustKey, init_date, staff_id)
