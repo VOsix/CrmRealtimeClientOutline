@@ -765,7 +765,7 @@ object OptCbpStkjourCtstOfentrustDetails {
           "on s.business_flag = bf.business_flag " +
           "join tmp_moneytype mt " +
           "on s.money_type = mt.subentry " +
-          "where s.stock_type != '7' and " +
+          "where s.stock_type not in ('4','7') and " +
           "s.business_flag in (3002,4008,4010) and " +
           "s.position_str is not null and " +
           "s.fund_account is not null and " +

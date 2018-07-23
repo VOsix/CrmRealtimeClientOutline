@@ -38,6 +38,7 @@ object Utils {
   val topicOggCbsrealtime  = "ogg-cbsrealtime"
   val topicOggCbsentrust   = "ogg-cbsentrust"
   val topicOggCbpentrust   = "ogg-cbpentrust"
+  val topicOggEtfufundentrust = "ogg-etfufundentrust"
 
   //hbase
   val hbaseHosts = "10.23.147.32,10.23.147.33,10.23.147.39"
