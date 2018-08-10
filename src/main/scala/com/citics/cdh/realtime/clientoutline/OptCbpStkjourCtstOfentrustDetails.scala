@@ -75,19 +75,20 @@ object OptCbpStkjourCtstOfentrustDetails {
         entrust_details.registerTempTable("entrust_details")
 
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1201").registerTempTable("tmp_entrustway")
-        hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1204").registerTempTable("tmp_entrustbs")
+        hvc.sql("select * from tmp_sysdict WHERE dict_entry = 36003").registerTempTable("tmp_remark")
+//        hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1204").registerTempTable("tmp_entrustbs")
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1301").registerTempTable("tmp_exchangetype")
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1101").registerTempTable("tmp_moneytype")
         hvc.udf.register("concatDateTime", Utils.concatDateTime)
 
         val df = hvc.sql("select e.position_str, e.branch_no, e.fund_account, e.client_id, " +
           "concatDateTime(e.curr_date, e.curr_time) as curr_time, " +
-          "e.stock_code as stkcode, COALESCE(c.stock_name,'') as stkname, " +
+          "e.option_code as stkcode, COALESCE(c.option_name,'') as stkname, " +
           "COALESCE(mt.DICT_PROMPT,'') as money_type_name, " +
-          "COALESCE(eb.DICT_PROMPT,'') as remark, " +
+          "COALESCE(rm.DICT_PROMPT,'') as remark, " +
           "e.opt_entrust_price as entrust_price, " +
           "e.entrust_amount as entrust_amount, " +
-          "round(e.opt_entrust_price*e.entrust_amount,2) as entrust_balance, " +
+          "round(e.opt_entrust_price*e.entrust_amount*COALESCE(c.amount_per_hand,10000),2) as entrust_balance, " +
           "COALESCE(ew.DICT_PROMPT,'') as op_entrust_way_name, " +
           "COALESCE(et.DICT_PROMPT,'') as market_name, " +
           "e.exchange_type as exchange_type, " +
@@ -98,12 +99,14 @@ object OptCbpStkjourCtstOfentrustDetails {
           "on e.exchange_type = c.exchange_type and e.option_code = c.option_code " +
           "left outer join tmp_entrustway ew " +
           "on e.op_entrust_way = ew.subentry " +
-          "left outer join tmp_entrustbs eb " +
-          "on e.entrust_bs = eb.subentry " +
+//          "left outer join tmp_entrustbs eb " +
+//          "on e.entrust_bs = eb.subentry " +
           "left outer join tmp_exchangetype et " +
           "on e.exchange_type = et.subentry " +
           "left outer join tmp_moneytype mt " +
           "on e.money_type = mt.subentry " +
+          "left outer join tmp_remark rm " +
+          "on e.entrust_oc = rm.subentry " +
           "where e.entrust_type = '0' and " +
           "e.position_str is not null and " +
           "e.branch_no is not null and " +
@@ -260,7 +263,8 @@ object OptCbpStkjourCtstOfentrustDetails {
 
         optrealtime_details.registerTempTable("realtime_details")
 
-        hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1204").registerTempTable("tmp_entrustbs")
+        hvc.sql("select * from tmp_sysdict WHERE dict_entry = 36003").registerTempTable("tmp_remark")
+//        hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1204").registerTempTable("tmp_entrustbs")
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1301").registerTempTable("tmp_exchangetype")
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1212").registerTempTable("tmp_realtype")
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1101").registerTempTable("tmp_moneytype")
@@ -268,9 +272,9 @@ object OptCbpStkjourCtstOfentrustDetails {
 
         val df = hvc.sql("select r.position_str, r.fund_account, r.client_id, " +
           "concatDateTime(r.curr_date, r.curr_time) as curr_time, " +
-          "r.stock_code as stkcode, COALESCE(c.stock_name,'') as stkname, " +
+          "r.option_code as stkcode, COALESCE(c.option_name,'') as stkname, " +
           "COALESCE(mt.DICT_PROMPT,'') as money_type_name, " +
-          "COALESCE(eb.DICT_PROMPT,'') as remark, " +
+          "COALESCE(rm.DICT_PROMPT,'') as remark, " +
           "r.opt_business_price as price, " +
           "r.business_amount as amount, " +
           "r.business_balance as balance, " +
@@ -282,14 +286,16 @@ object OptCbpStkjourCtstOfentrustDetails {
           "from realtime_details r " +
           "left outer join tmp_optcode c " +
           "on r.exchange_type = c.exchange_type and r.option_code = c.option_code " +
-          "left outer join tmp_entrustbs as eb " +
-          "on r.entrust_bs = eb.subentry " +
+//          "left outer join tmp_entrustbs as eb " +
+//          "on r.entrust_bs = eb.subentry " +
           "left outer join tmp_realtype as rt " +
           "on r.real_type = rt.subentry " +
           "left outer join tmp_exchangetype as et " +
           "on r.exchange_type = et.subentry " +
           "left outer join tmp_moneytype as mt " +
           "on c.money_type = mt.subentry " +
+          "left outer join tmp_remark rm " +
+          "on r.entrust_oc = rm.subentry " +
           "where r.real_status != '2' and " +
           "r.position_str is not null and " +
           "r.fund_account is not null and " +

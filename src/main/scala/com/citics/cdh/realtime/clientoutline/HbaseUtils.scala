@@ -145,13 +145,13 @@ object HbaseUtils {
 
     val rowkey = s"${exchange_type}|${option_code}"
     val get = new Get(Bytes.toBytes(rowkey))
-    get.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("STOCK_NAME"))
+    get.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("OPTION_NAME"))
     get.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("MONEY_TYPE"))
 
     try {
       val rs = table.get(get).rawCells().map(c => (Bytes.toString(c.getQualifierArray, c.getQualifierOffset, c.getQualifierLength),
         Bytes.toString(c.getValueArray, c.getValueOffset, c.getValueLength))).toMap
-      val result = (rs.getOrElse("STOCK_NAME", ""), rs.getOrElse("MONEY_TYPE", "") match {
+      val result = (rs.getOrElse("OPTION_NAME", ""), rs.getOrElse("MONEY_TYPE", "") match {
         case "0" => "人民币"
         case "1" => "美元"
         case "2" => "港币"

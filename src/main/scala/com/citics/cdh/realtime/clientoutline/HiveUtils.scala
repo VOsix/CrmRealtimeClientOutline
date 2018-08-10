@@ -46,8 +46,9 @@ object HiveUtils {
 
     if (hasReadOptcode != true) {
       query_init(sc)
-      val df = hvc.sql(s"select exchange_type, option_code, " +
-                       s"COALESCE(stock_name,'') as stock_name, COALESCE(money_type,'') as money_type " +
+      val df = hvc.sql("select exchange_type, option_code, " +
+                       "COALESCE(option_name,'') as option_name, COALESCE(money_type,'') as money_type, " +
+                       "COALESCE(amount_per_hand,10000) as amount_per_hand " +
                        s"from ${Utils.hiveOptCode}")
       df.registerTempTable("tmp_optcode")
       hvc.cacheTable("tmp_optcode")
@@ -101,7 +102,7 @@ object HiveUtils {
       query_init(sc)
       val df = hvc.sql(s"select dict_entry, subentry, dict_prompt " +
                        s"from ${Utils.hiveSystemDict} " +
-                       s"where dict_entry in (1101, 1201, 1204, 1212, 1301)")
+                       s"where dict_entry in (1101, 1201, 1204, 1212, 1301, 36003)")
       df.registerTempTable("tmp_sysdict")
       hvc.cacheTable("tmp_sysdict")
       hasReadSystemDict = true
