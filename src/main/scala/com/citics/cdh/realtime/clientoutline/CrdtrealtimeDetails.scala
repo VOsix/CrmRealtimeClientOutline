@@ -68,6 +68,7 @@ object CrdtrealtimeDetails {
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1101").registerTempTable("tmp_moneytype")
         hvc.udf.register("concatDateTime", Utils.concatDateTime)
 
+        val today = Utils.getSpecDay(0, "yyyyMMdd")
         val df = hvc.sql("select r.position_str, r.fund_account, r.client_id, " +
                          "concatDateTime(r.curr_date, r.curr_time) as curr_time, " +
                          "r.stock_code as stkcode, COALESCE(c.stock_name,'') as stkname, " +
@@ -92,7 +93,8 @@ object CrdtrealtimeDetails {
                          "on r.exchange_type = et.subentry " +
                          "left outer join tmp_moneytype as mt " +
                          "on c.money_type = mt.subentry " +
-                         "where r.real_status != '2' and " +
+                         s"where r.init_date >= '${today}' and " +
+                         "r.real_status != '2' and " +
                          "r.real_type != '2' and " +
                          "r.position_str is not null and " +
                          "r.fund_account is not null and " +

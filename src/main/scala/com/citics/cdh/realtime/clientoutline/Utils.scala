@@ -31,6 +31,7 @@ object Utils {
   val topicOggOptrealtime  = "ogg-optrealtime"
   val topicOggOptentrust   = "ogg-optentrust"
   val topicOggOfentrust    = "ogg-ofentrust"
+  val topicOggSecumentrust = "ogg-secumentrust"
   val topicOggOtcbookorder = "ogg-otcbookorder"
   val topicOggOtcorder     = "ogg-otcorder"
   val topicOggCtstentrust  = "ogg-ctstentrust"
@@ -169,7 +170,7 @@ object Utils {
       case ex: Exception => {
         //解析异常 使用当前时间戳
         rst = getSpecDay(0, "yyyy-MM-dd HH:mm:ss")
-        logger.warn("parse to 'yyyyMMdd HHmmssSSS' error")
+        logger.warn(s"parse '${date.toString} ${time.toString}' to 'yyyyMMdd HHmmssSSS' error")
         ex.printStackTrace()
       }
     }
@@ -188,7 +189,7 @@ object Utils {
       case ex: Exception => {
         //解析异常 使用当前时间戳
         rst = getSpecDay(0, "yyyy-MM-dd HH:mm:ss")
-        logger.warn("parse to 'yyyyMMdd HHmmss' error")
+        logger.warn(s"parse '${date.toString} ${time.toString}'to 'yyyyMMdd HHmmss' error")
         ex.printStackTrace()
       }
     }

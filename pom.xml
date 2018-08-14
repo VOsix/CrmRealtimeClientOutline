@@ -6,7 +6,7 @@
 
     <groupId>com.citics.cdh</groupId>
     <artifactId>CrmRealtimeClientOutline</artifactId>
-    <version>1.6-SNAPSHOT</version>
+    <version>1.8-SNAPSHOT</version>
 
     <properties>
         <scala.version>2.10.5</scala.version>

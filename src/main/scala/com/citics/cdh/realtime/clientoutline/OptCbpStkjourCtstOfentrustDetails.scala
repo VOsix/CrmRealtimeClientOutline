@@ -81,6 +81,7 @@ object OptCbpStkjourCtstOfentrustDetails {
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1101").registerTempTable("tmp_moneytype")
         hvc.udf.register("concatDateTime", Utils.concatDateTime)
 
+        val today = Utils.getSpecDay(0, "yyyyMMdd")
         val df = hvc.sql("select e.position_str, e.branch_no, e.fund_account, e.client_id, " +
           "concatDateTime(e.curr_date, e.curr_time) as curr_time, " +
           "e.option_code as stkcode, COALESCE(c.option_name,'') as stkname, " +
@@ -107,7 +108,8 @@ object OptCbpStkjourCtstOfentrustDetails {
           "on e.money_type = mt.subentry " +
           "left outer join tmp_remark rm " +
           "on e.entrust_oc = rm.subentry " +
-          "where e.entrust_type = '0' and " +
+          s"where e.init_date >= '${today}' and " +
+          "e.entrust_type = '0' and " +
           "e.position_str is not null and " +
           "e.branch_no is not null and " +
           "e.fund_account is not null and " +
@@ -270,6 +272,7 @@ object OptCbpStkjourCtstOfentrustDetails {
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1101").registerTempTable("tmp_moneytype")
         hvc.udf.register("concatDateTime", Utils.concatDateTime)
 
+        val today = Utils.getSpecDay(0, "yyyyMMdd")
         val df = hvc.sql("select r.position_str, r.fund_account, r.client_id, " +
           "concatDateTime(r.curr_date, r.curr_time) as curr_time, " +
           "r.option_code as stkcode, COALESCE(c.option_name,'') as stkname, " +
@@ -296,7 +299,8 @@ object OptCbpStkjourCtstOfentrustDetails {
           "on c.money_type = mt.subentry " +
           "left outer join tmp_remark rm " +
           "on r.entrust_oc = rm.subentry " +
-          "where r.real_status != '2' and " +
+          s"where r.init_date >= '${today}' and " +
+          "r.real_status != '2' and " +
           "r.position_str is not null and " +
           "r.fund_account is not null and " +
           "r.client_id is not null and " +
@@ -466,6 +470,7 @@ object OptCbpStkjourCtstOfentrustDetails {
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1101").registerTempTable("tmp_moneytype")
         hvc.udf.register("concatDateTime", Utils.concatDateTime2)
 
+        val today = Utils.getSpecDay(0, "yyyyMMdd")
         val df = hvc.sql("select e.position_str, e.branch_no, e.fund_account, e.client_id, " +
           "concatDateTime(e.curr_date, e.curr_time) as curr_time, " +
           "e.stock_code as stkcode, COALESCE(c.stock_name,'') as stkname, " +
@@ -489,7 +494,8 @@ object OptCbpStkjourCtstOfentrustDetails {
           "on e.exchange_type = et.subentry " +
           "left outer join tmp_moneytype mt " +
           "on c.money_type = mt.subentry " +
-          "where e.entrust_type = '0' and " +
+          s"where e.init_date >= '${today}' and " +
+          "e.entrust_type = '0' and " +
           "e.position_str is not null and " +
           "e.branch_no is not null and " +
           "e.fund_account is not null and " +
@@ -755,6 +761,7 @@ object OptCbpStkjourCtstOfentrustDetails {
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1101").registerTempTable("tmp_moneytype")
         hvc.udf.register("concatDateTime", Utils.concatDateTime2)
 
+        val today = Utils.getSpecDay(0, "yyyyMMdd")
         val df = hvc.sql("select s.position_str, s.branch_no, s.fund_account, s.client_id, " +
           "concatDateTime(s.curr_date, s.curr_time) as curr_time, " +
           "COALESCE(br.branch_name,'') as branch_name, " +
@@ -771,7 +778,8 @@ object OptCbpStkjourCtstOfentrustDetails {
           "on s.business_flag = bf.business_flag " +
           "join tmp_moneytype mt " +
           "on s.money_type = mt.subentry " +
-          "where s.stock_type not in ('4','7') and " +
+          s"where s.init_date >= '${today}' and " +
+          "s.stock_type not in ('4','7') and " +
           "s.business_flag in (3002,4008,4010) and " +
           "s.position_str is not null and " +
           "s.fund_account is not null and " +
@@ -905,9 +913,10 @@ object OptCbpStkjourCtstOfentrustDetails {
   }
 
   def ofentrustPrc(sc: SparkContext, ssc: StreamingContext, hvc: HiveContext): Unit = {
-    val kafkaReader = new KafkaReader[String, String, StringDecoder, StringDecoder](ssc, Utils.brokerList, Utils.topicOggOfentrust,
+    val kafkaReader = new KafkaReader[String, String, StringDecoder, StringDecoder](ssc, Utils.brokerList, Utils.topicOggSecumentrust,
                                                                                     Utils.hbaseTKafkaOffset, Utils.hbaseHosts, Utils.hbasePort)
 
+    //20180811 由集中交易场外产品委托明细由ofentrust改为secumentrust
     val kafkaStream = kafkaReader.getKafkaStream()
 
     val lines = kafkaStream.map(_._2).flatMap(str => {
@@ -932,36 +941,42 @@ object OptCbpStkjourCtstOfentrustDetails {
 
       val entrust_details = hvc.read.json(rdd)
 
+//      if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "POSITION_STR", "FUND_ACCOUNT", "CLIENT_ID",
+//        "CURR_DATE", "CURR_TIME", "FUND_CODE", "STOCK_NAME", "ENTRUST_PRICE",
+//        "DEAL_SHARE", "BALANCE", "ENTRUST_STATUS", "BUSINESS_FLAG", "INIT_DATE")) {
+
       if (HiveUtils.schemaFieldsCheck(entrust_details.schema, "POSITION_STR", "FUND_ACCOUNT", "CLIENT_ID",
-        "CURR_DATE", "CURR_TIME", "FUND_CODE", "STOCK_NAME", "ENTRUST_PRICE",
-        "DEAL_SHARE", "BALANCE", "ENTRUST_STATUS", "BUSINESS_FLAG", "INIT_DATE")) {
+          "CURR_DATE", "CURR_TIME", "PROD_CODE", "PROD_NAME", "ENTRUST_PRICE",
+          "BUSINESS_AMOUNT", "ENTRUST_BALANCE", "ENTRUST_STATUS", "BUSINESS_FLAG", "INIT_DATE")) {
 
         entrust_details.registerTempTable("entrust_details")
 
         hvc.udf.register("concatDateTime", Utils.concatDateTime2)
 
+        val today = Utils.getSpecDay(0, "yyyyMMdd")
         val df = hvc.sql("select e.position_str, e.fund_account, e.client_id, " +
           "concatDateTime(e.curr_date, e.curr_time) as curr_time, " +
-          "e.fund_code, e.stock_name, " +
+          "e.prod_code, e.prod_name, " +
           "COALESCE(bf.BUSINESS_NAME,'') as business_name, " +
           "e.entrust_price as price, " +
-          "e.deal_share, " +
-          "e.balance, " +
+          "e.business_amount, " +
+          "e.entrust_balance, " +
           "e.entrust_status, " +
           "e.init_date " +
           "from entrust_details e " +
           "left outer join tmp_businflag bf " +
           "on e.business_flag = bf.business_flag " +
-          "where e.position_str is not null and " +
+          s"where e.init_date >= '${today}' and " +
+          "e.position_str is not null and " +
           "e.fund_account is not null and " +
           "e.client_id is not null and " +
           "e.curr_date is not null and " +
           "e.curr_time is not null and " +
-          "e.fund_code is not null and " +
-          "e.stock_name is not null and " +
+          "e.prod_code is not null and " +
+          "e.prod_name is not null and " +
           "e.entrust_price is not null and " +
-          "e.deal_share is not null and " +
-          "e.balance is not null and " +
+          "e.business_amount is not null and " +
+          "e.entrust_balance is not null and " +
           "e.init_date is not null").repartition(2)
         //        df.show(10)
 
@@ -1075,7 +1090,7 @@ object OptCbpStkjourCtstOfentrustDetails {
 
     updateRecords.foreachRDD(rdd => {
       val rdd1 = rdd.filter(m => (m.contains("ENTRUST_STATUS") || m.contains("ENTRUST_PRICE") ||
-        m.contains("DEAL_SHARE") || m.contains("BALANCE")) && m.contains("POSITION_STR"))
+        m.contains("BUSINESS_AMOUNT") || m.contains("ENTRUST_BALANCE")) && m.contains("POSITION_STR"))
       //相同postion_str 到一个分区 对应操作按pos排序
       val rdd2 = rdd1.map(m => (m("POSITION_STR")._1, m)).groupByKey(2).map(x => {
         (x._1, x._2.toList.sortWith((m1, m2) => {
@@ -1111,8 +1126,8 @@ object OptCbpStkjourCtstOfentrustDetails {
                 //m对应一条update记录
                 val entrust_status = m.get("ENTRUST_STATUS")
                 val entrust_price = m.get("ENTRUST_PRICE")
-                val deal_share = m.get("DEAL_SHARE")
-                val balance = m.get("BALANCE")
+                val deal_share = m.get("BUSINESS_AMOUNT")
+                val balance = m.get("ENTRUST_BALANCE")
 
                 columns.map(k => {
                   val put = new Put(Bytes.toBytes(k))
@@ -1183,8 +1198,9 @@ object OptCbpStkjourCtstOfentrustDetails {
         hvc.sql("select * from tmp_sysdict WHERE dict_entry = 1101").registerTempTable("tmp_moneytype")
         hvc.udf.register("concatDateTime", Utils.concatDateTime2)
 
+        val today = Utils.getSpecDay(0, "yyyyMMdd")
         val df = hvc.sql("select e.position_str, e.branch_no, e.fund_account, e.client_id, " +
-          "'' as curr_time, " + //柜台数据不规范 按空返回
+          "concatDateTime(e.curr_date, e.curr_time) as curr_time, " +
           "e.stock_code as stkcode, COALESCE(c.stock_name,'') as stkname, " +
           "COALESCE(mt.DICT_PROMPT,'') as money_type_name, " +
           "COALESCE(eb.DICT_PROMPT,'') as remark, " +
@@ -1206,7 +1222,8 @@ object OptCbpStkjourCtstOfentrustDetails {
           "on e.exchange_type = et.subentry " +
           "left outer join tmp_moneytype mt " +
           "on mt.subentry = c.money_type " +
-          "where e.entrust_type = '0' and " +
+          s"where e.init_date >= '${today}' and " +
+          "e.entrust_type = '0' and " +
           "e.position_str is not null and " +
           "e.branch_no is not null and " +
           "e.fund_account is not null and " +
@@ -1272,9 +1289,10 @@ object OptCbpStkjourCtstOfentrustDetails {
 
                   val staff_id = i.getOrElse("id", "")
                   val staff_name = i.getOrElse("name", "")
+                  val ts = (10000000000L - Utils.getUnixStamp(curr_time, "yyyy-MM-dd HH:mm:ss")).toString
 
                   //staff_id 逆序 同一员工下按position_str排序
-                  val arr = Array(staff_id.reverse, init_date, position_str, client_name, fund_account)
+                  val arr = Array(staff_id.reverse, ts, init_date, position_str, client_name, fund_account)
                   val rowkey = arr.mkString(",")
                   val putTry = new Put(Bytes.toBytes(rowkey))
                   putTry.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("exist"), Bytes.toBytes("1"))
